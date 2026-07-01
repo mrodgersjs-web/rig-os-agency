@@ -1,0 +1,31 @@
+# ── RIG OS Agency — Railway config ─────────────────────────────────
+# Deploy with: railway up or railway deploy
+[deploy]
+startCommand = "node server.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = [
+  "src/**",
+  "public/**",
+  "next.config.ts",
+  "package.json",
+  "Dockerfile"
+]
+
+[[build.envs]]
+name = "NEXT_TELEMETRY_DISABLED"
+value = "1"
+
+[[deploy.envs]]
+name = "NODE_ENV"
+value = "production"
+
+[[deploy.envs]]
+name = "PORT"
+value = "3737"
