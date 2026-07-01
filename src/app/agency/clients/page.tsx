@@ -1,529 +1,458 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Plus, X, Trash2, Mail, Phone, Globe, Activity,
+  Users, Plus, Search, Trash2, Edit3, X, Save,
+  Building2, Heart, DollarSign, Activity, Filter,
 } from "lucide-react";
-import type { Client, Vertical, ServiceTier, ClientStatus, ClientHealth } from "@/lib/agency-types";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-};
+interface Client {
+  id: string;
+  name: string;
+  vertical: string;
+  status: string;
+  health: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  website: string;
+  serviceTier: string;
+  monthlyFee: number;
+  annualFee: number;
+  startDate: string;
+  endDate: string | null;
+  autoRenew: boolean;
+  services: string[];
+  assignedAgents: string[];
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  prospect: "Prospect",
-  qualified: "Qualified",
-  proposal_sent: "Proposal Sent",
-  negotiation: "Negotiation",
-  active: "Active",
-  churned: "Churned",
-  lost: "Lost",
-};
+interface Vertical {
+  id: string;
+  name: string;
+  color: string;
+}
 
-const STATUS_COLORS: Record<string, string> = {
-  prospect: "#a855f7",
-  qualified: "#fbbf24",
-  proposal_sent: "#d4a574",
-  negotiation: "#c4607e",
-  active: "#5ab896",
-  churned: "#ef4444",
-  lost: "#666",
-};
+const VERTICALS: Vertical[] = [
+  { id: "construction", name: "Construction", color: "#d4a574" },
+  { id: "law", name: "Law Firms", color: "#5ab896" },
+  { id: "healthcare", name: "Healthcare", color: "#ef4444" },
+  { id: "dental", name: "Dental", color: "#22d3ee" },
+  { id: "cpa", name: "CPA", color: "#fbbf24" },
+  { id: "services", name: "Services", color: "#a855f7" },
+  { id: "manufacturing", name: "Manufacturing", color: "#c97c5e" },
+  { id: "pe_cfo", name: "PE / CFO", color: "#c4607e" },
+];
 
-const HEALTH_COLORS: Record<string, string> = {
+const SERVICE_TIERS = [
+  { id: "starter", name: "Starter", fee: 2500 },
+  { id: "growth", name: "Growth", fee: 5000 },
+  { id: "scale", name: "Scale", fee: 8000 },
+  { id: "enterprise", name: "Enterprise", fee: 18000 },
+];
+
+const STATUSES = ["prospect", "qualified", "proposal_sent", "negotiation", "active", "churned", "lost"];
+const HEALTHS = ["green", "yellow", "red"];
+
+const healthColors: Record<string, string> = {
   green: "#5ab896",
   yellow: "#fbbf24",
   red: "#ef4444",
 };
 
-function fmtMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+const statusColors: Record<string, string> = {
+  active: "#5ab896",
+  prospect: "#a855f7",
+  qualified: "#22d3ee",
+  proposal_sent: "#fbbf24",
+  negotiation: "#c4607e",
+  churned: "#ef4444",
+  lost: "#ef4444",
+};
+
+function formatCurrency(n: number): string {
+  if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n}`;
 }
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [verticals, setVerticals] = useState<Vertical[]>([]);
-  const [tiers, setTiers] = useState<ServiceTier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [search, setSearch] = useState("");
   const [filterVertical, setFilterVertical] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    vertical: "services",
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
-    website: "",
-    serviceTier: "starter",
-    monthlyFee: 2500,
-    notes: "",
-  });
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/agency/clients/crud");
-      const data = await res.json();
-      setClients(data.clients || []);
-      setVerticals(data.verticals || []);
-      setTiers(data.serviceTiers || []);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadClients();
+  }, []);
 
-  async function handleCreate() {
-    if (!createForm.name || !createForm.contactName || !createForm.contactEmail) return;
+  async function loadClients() {
+    setLoading(true);
     try {
-      await fetch("/api/agency/clients/crud", {
+      const res = await fetch("/api/agency/clients");
+      const data = await res.json();
+      setClients(data.clients || []);
+    } catch (e) {
+      console.error("Failed to load clients:", e);
+    }
+    setLoading(false);
+  }
+
+  async function handleSave(client: Partial<Client>) {
+    if (editingClient) {
+      await fetch(`/api/agency/clients/${editingClient.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(client),
+      });
+    } else {
+      await fetch("/api/agency/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...createForm,
-          annualFee: createForm.monthlyFee * 12,
-          status: "prospect",
-          health: "green",
-          autoRenew: false,
-          services: [],
-          assignedAgents: [],
-        }),
+        body: JSON.stringify(client),
       });
-      await load();
-      setShowCreate(false);
-      setCreateForm({
-        name: "",
-        vertical: "services",
-        contactName: "",
-        contactEmail: "",
-        contactPhone: "",
-        website: "",
-        serviceTier: "starter",
-        monthlyFee: 2500,
-        notes: "",
-      });
-    } catch {
-      // ignore
     }
-  }
-
-  async function handleUpdateStatus(id: string, status: string) {
-    try {
-      await fetch("/api/agency/clients/crud", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      });
-      await load();
-    } catch {
-      // ignore
-    }
-  }
-
-  async function handleUpdateHealth(id: string, health: string) {
-    try {
-      await fetch("/api/agency/clients/crud", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, health }),
-      });
-      await load();
-    } catch {
-      // ignore
-    }
+    setShowForm(false);
+    setEditingClient(null);
+    await loadClients();
   }
 
   async function handleDelete(id: string) {
-    try {
-      await fetch(`/api/agency/clients/crud?id=${id}`, { method: "DELETE" });
-      await load();
-    } catch {
-      // ignore
-    }
+    if (!confirm("Delete this client? This cannot be undone.")) return;
+    await fetch(`/api/agency/clients/${id}`, { method: "DELETE" });
+    await loadClients();
   }
 
+  function handleEdit(client: Client) {
+    setEditingClient(client);
+    setShowForm(true);
+  }
+
+  // Filtered clients
   const filtered = clients.filter((c) => {
-    if (filterVertical !== "all" && c.vertical !== filterVertical) return false;
-    if (filterStatus !== "all" && c.status !== filterStatus) return false;
-    return true;
+    const matchesSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.contactName.toLowerCase().includes(search.toLowerCase());
+    const matchesVertical = filterVertical === "all" || c.vertical === filterVertical;
+    const matchesStatus = filterStatus === "all" || c.status === filterStatus;
+    return matchesSearch && matchesVertical && matchesStatus;
   });
-
-  const activeClients = clients.filter((c) => c.status === "active");
-  const totalARR = activeClients.reduce((s, c) => s + c.annualFee, 0);
-  const totalMRR = activeClients.reduce((s, c) => s + c.monthlyFee, 0);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}>Clients</h1>
-        <div className="text-[14px]" style={{ color: "var(--cream-dim)" }}>Loading clients…</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-3 mb-2">
-          <Users size={22} style={{ color: "var(--gold)" }} />
-          <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--cream-mute)", fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}>
-            Agency Operations
-          </span>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}>
+            Clients
+          </h1>
+          <p className="text-[14px] mt-1" style={{ color: "var(--cream-dim)" }}>
+            {clients.length} clients across {VERTICALS.length} verticals — SQLite persisted
+          </p>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}>
-              Clients
-            </h1>
-            <p className="text-[14px] mt-1" style={{ color: "var(--cream-dim)" }}>
-              {clients.length} total · {activeClients.length} active · {fmtMoney(totalMRR)}/mo · {fmtMoney(totalARR)}/yr
-            </p>
-          </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-            style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
-          >
-            <Plus size={16} />
-            <span className="text-[13px] font-semibold">Add Client</span>
-          </button>
-        </div>
-      </motion.section>
-
-      {/* Filter Bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] uppercase tracking-wider" style={{ color: "var(--cream-mute)" }}>Vertical:</span>
-          <select
-            value={filterVertical}
-            onChange={(e) => setFilterVertical(e.target.value)}
-            className="px-2 py-1 rounded-lg text-[12px] outline-none"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)", border: "1px solid var(--line-soft)" }}
-          >
-            <option value="all">All</option>
-            {verticals.map((v) => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] uppercase tracking-wider" style={{ color: "var(--cream-mute)" }}>Status:</span>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2 py-1 rounded-lg text-[12px] outline-none"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)", border: "1px solid var(--line-soft)" }}
-          >
-            <option value="all">All</option>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-        </div>
-        <span className="text-[12px] ml-auto" style={{ color: "var(--cream-mute)" }}>{filtered.length} shown</span>
+        <button
+          onClick={() => { setEditingClient(null); setShowForm(true); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition"
+          style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+        >
+          <Plus size={16} /> New Client
+        </button>
       </div>
 
-      {/* Client Cards */}
-      <motion.div {...fadeUp} transition={{ duration: 0.3, delay: 0.05 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((c) => {
-          const vInfo = verticals.find((v) => v.id === c.vertical);
-          const tierInfo = tiers.find((t) => t.id === c.serviceTier);
-          return (
-            <div
-              key={c.id}
-              className="rounded-xl p-5 border"
-              style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
-            >
-              {/* Header row */}
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: HEALTH_COLORS[c.health] }}
-                      title={`Health: ${c.health}`}
-                    />
-                    <span className="text-[15px] font-semibold" style={{ color: "var(--cream)" }}>{c.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {vInfo && (
-                      <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: "var(--bg-mid)", color: vInfo.color }}>
-                        {vInfo.name}
-                      </span>
-                    )}
-                    <span
-                      className="text-[10px] px-2 py-0.5 rounded-full"
-                      style={{ background: "var(--bg-mid)", color: STATUS_COLORS[c.status] }}
-                    >
-                      {STATUS_LABELS[c.status]}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[16px] font-semibold mono" style={{ color: "var(--gold)" }}>{fmtMoney(c.monthlyFee)}/mo</div>
-                  <div className="text-[11px] mono" style={{ color: "var(--emerald)" }}>{fmtMoney(c.annualFee)}/yr</div>
-                </div>
-              </div>
-
-              {/* Contact info */}
-              <div className="space-y-1.5 mb-3">
-                <div className="flex items-center gap-2 text-[12px]" style={{ color: "var(--cream-dim)" }}>
-                  <Users size={13} style={{ color: "var(--cream-mute)" }} />
-                  {c.contactName}
-                </div>
-                <div className="flex items-center gap-2 text-[12px]" style={{ color: "var(--cream-dim)" }}>
-                  <Mail size={13} style={{ color: "var(--cream-mute)" }} />
-                  {c.contactEmail}
-                </div>
-                {c.contactPhone && (
-                  <div className="flex items-center gap-2 text-[12px]" style={{ color: "var(--cream-dim)" }}>
-                    <Phone size={13} style={{ color: "var(--cream-mute)" }} />
-                    {c.contactPhone}
-                  </div>
-                )}
-                {c.website && (
-                  <div className="flex items-center gap-2 text-[12px]" style={{ color: "var(--cream-dim)" }}>
-                    <Globe size={13} style={{ color: "var(--cream-mute)" }} />
-                    {c.website}
-                  </div>
-                )}
-              </div>
-
-              {/* Tier & Services */}
-              {tierInfo && (
-                <div className="mb-3">
-                  <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: "var(--bg-mid)", color: tierInfo.color }}>
-                    {tierInfo.name} tier
-                  </span>
-                </div>
-              )}
-              {c.services.length > 0 && (
-                <div className="mb-3">
-                  <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--cream-mute)" }}>Services</div>
-                  <div className="flex flex-wrap gap-1">
-                    {c.services.map((s, i) => (
-                      <span key={i} className="text-[11px] px-2 py-0.5 rounded" style={{ background: "var(--bg-mid)", color: "var(--cream-dim)" }}>
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {c.notes && (
-                <div className="text-[11px] mb-3 italic" style={{ color: "var(--cream-mute)" }}>
-                  "{c.notes}"
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-wrap pt-2 border-t" style={{ borderColor: "var(--line-soft)" }}>
-                {/* Status selector */}
-                <select
-                  value={c.status}
-                  onChange={(e) => handleUpdateStatus(c.id, e.target.value)}
-                  className="px-2 py-1 rounded-lg text-[11px] outline-none"
-                  style={{ background: "var(--bg-mid)", color: "var(--cream-dim)", border: "1px solid var(--line-soft)" }}
-                >
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-                {/* Health selector */}
-                <select
-                  value={c.health}
-                  onChange={(e) => handleUpdateHealth(c.id, e.target.value)}
-                  className="px-2 py-1 rounded-lg text-[11px] outline-none"
-                  style={{ background: "var(--bg-mid)", color: "var(--cream-dim)", border: "1px solid var(--line-soft)" }}
-                >
-                  <option value="green">🟢 Green</option>
-                  <option value="yellow">🟡 Yellow</option>
-                  <option value="red">🔴 Red</option>
-                </select>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="ml-auto p-1.5 rounded-lg transition-colors"
-                  style={{ color: "#ef4444" }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </motion.div>
-
-      {filtered.length === 0 && !loading && (
-        <div className="rounded-xl p-8 text-center border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
-          <Users size={32} style={{ color: "var(--cream-mute)", margin: "0 auto 8px" }} />
-          <div className="text-[14px]" style={{ color: "var(--cream-dim)" }}>No clients match the current filter.</div>
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+          <Search size={14} style={{ color: "var(--cream-dim)" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search clients..."
+            className="bg-transparent text-[13px] outline-none w-48"
+            style={{ color: "var(--cream)" }}
+          />
         </div>
-      )}
-
-      {/* Create Client Modal */}
-      {showCreate && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-          onClick={() => setShowCreate(false)}
+        <select
+          value={filterVertical}
+          onChange={(e) => setFilterVertical(e.target.value)}
+          className="px-3 py-2 rounded-lg border text-[13px] outline-none"
+          style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-2xl border max-w-lg w-full max-h-[85vh] overflow-y-auto"
-            style={{ background: "var(--bg-mid)", borderColor: "var(--line-soft)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-5 border-b sticky top-0" style={{ borderColor: "var(--line-soft)", background: "var(--bg-mid)" }}>
-              <h2 className="text-[16px] font-semibold" style={{ color: "var(--cream)" }}>Add Client</h2>
-              <button onClick={() => setShowCreate(false)} style={{ color: "var(--cream-mute)" }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Company Name *</label>
-                <input
-                  type="text"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                  style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                  placeholder="Acme Corp"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Vertical</label>
-                <select
-                  value={createForm.vertical}
-                  onChange={(e) => setCreateForm({ ...createForm, vertical: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                  style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                >
-                  {verticals.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Contact Name *</label>
-                  <input
-                    type="text"
-                    value={createForm.contactName}
-                    onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                    placeholder="Jane Doe"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Contact Email *</label>
-                  <input
-                    type="email"
-                    value={createForm.contactEmail}
-                    onChange={(e) => setCreateForm({ ...createForm, contactEmail: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                    placeholder="jane@acme.com"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Phone</label>
-                  <input
-                    type="text"
-                    value={createForm.contactPhone}
-                    onChange={(e) => setCreateForm({ ...createForm, contactPhone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                    placeholder="303-555-0100"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Website</label>
-                  <input
-                    type="text"
-                    value={createForm.website}
-                    onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                    placeholder="acme.com"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Service Tier</label>
-                  <select
-                    value={createForm.serviceTier}
-                    onChange={(e) => {
-                      const tier = tiers.find((t) => t.id === e.target.value);
-                      setCreateForm({
-                        ...createForm,
-                        serviceTier: e.target.value,
-                        monthlyFee: tier?.monthlyFee || 2500,
-                      });
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                  >
-                    {tiers.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name} ({fmtMoney(t.monthlyFee)}/mo)</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Monthly Fee ($)</label>
-                  <input
-                    type="number"
-                    value={createForm.monthlyFee}
-                    onChange={(e) => setCreateForm({ ...createForm, monthlyFee: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-wider mb-1 block" style={{ color: "var(--cream-mute)" }}>Notes</label>
-                <textarea
-                  value={createForm.notes}
-                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-lg border text-[13px] outline-none resize-none"
-                  style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
-                  placeholder="Initial context, lead source, etc."
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-3 p-5 border-t" style={{ borderColor: "var(--line-soft)" }}>
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-[13px]" style={{ color: "var(--cream-dim)" }}>
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={!createForm.name || !createForm.contactName || !createForm.contactEmail}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold disabled:opacity-50"
-                style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
-              >
-                Add Client
-              </button>
-            </div>
-          </motion.div>
+          <option value="all">All Verticals</option>
+          {VERTICALS.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 rounded-lg border text-[13px] outline-none"
+          style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
+        >
+          <option value="all">All Statuses</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+        </select>
+      </div>
+
+      {/* Client Table */}
+      {loading ? (
+        <div className="rounded-xl p-8 border text-center" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream-dim)" }}>
+          Loading clients from SQLite...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl p-8 border text-center" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)", color: "var(--cream-dim)" }}>
+          No clients match your filters.
+        </div>
+      ) : (
+        <div className="rounded-xl border overflow-hidden" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+          <table className="w-full">
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                {["Client", "Vertical", "Status", "Health", "Tier", "MRR", "Actions"].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-[11px] uppercase tracking-wider" style={{ color: "var(--cream-dim)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((client) => {
+                const vert = VERTICALS.find((v) => v.id === client.vertical);
+                return (
+                  <tr key={client.id} style={{ borderBottom: "1px solid var(--line-soft)" }} className="hover:bg-[var(--bg-mid)] transition">
+                    <td className="px-4 py-3">
+                      <div className="text-[14px] font-medium" style={{ color: "var(--cream)" }}>{client.name}</div>
+                      <div className="text-[11px]" style={{ color: "var(--cream-mute)" }}>{client.contactName}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[12px] px-2 py-0.5 rounded" style={{ background: (vert?.color || "#999") + "20", color: vert?.color || "#999" }}>
+                        {vert?.name || client.vertical}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[12px]" style={{ color: statusColors[client.status] || "var(--cream-dim)" }}>
+                        {client.status.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ background: healthColors[client.health] }} />
+                        <span className="text-[11px]" style={{ color: "var(--cream-dim)" }}>{client.health}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[12px] capitalize" style={{ color: "var(--cream)" }}>{client.serviceTier}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[13px] font-semibold" style={{ color: "var(--gold)" }}>{formatCurrency(client.monthlyFee)}/mo</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEdit(client)} className="p-1.5 rounded hover:bg-[var(--bg-mid)] transition" style={{ color: "var(--cream-dim)" }}>
+                          <Edit3 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(client.id)} className="p-1.5 rounded hover:bg-[var(--bg-mid)] transition" style={{ color: "var(--cream-dim)" }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
+
+      {/* Form Modal */}
+      <AnimatePresence>
+        {showForm && (
+          <ClientForm
+            client={editingClient}
+            onSave={handleSave}
+            onClose={() => { setShowForm(false); setEditingClient(null); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ── Client Form Modal ──────────────────────────────────────────────
+function ClientForm({ client, onSave, onClose }: {
+  client: Client | null;
+  onSave: (client: Partial<Client>) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: client?.name || "",
+    vertical: client?.vertical || "services",
+    status: client?.status || "prospect",
+    health: client?.health || "green",
+    contactName: client?.contactName || "",
+    contactEmail: client?.contactEmail || "",
+    contactPhone: client?.contactPhone || "",
+    website: client?.website || "",
+    serviceTier: client?.serviceTier || "starter",
+    monthlyFee: client?.monthlyFee || 2500,
+    annualFee: client?.annualFee || 30000,
+    autoRenew: client?.autoRenew || false,
+    notes: client?.notes || "",
+  });
+
+  function update(field: string, value: unknown) {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "serviceTier") {
+        const tier = SERVICE_TIERS.find((t) => t.id === value);
+        if (tier) {
+          next.monthlyFee = tier.fee;
+          next.annualFee = tier.fee * 12;
+        }
+      }
+      if (field === "monthlyFee") {
+        next.annualFee = (value as number) * 12;
+      }
+      return next;
+    });
+  }
+
+  const inputClass = "w-full px-3 py-2 rounded-lg border text-[13px] outline-none focus:border-[var(--gold)]";
+  const inputStyle = { background: "var(--bg-mid)", borderColor: "var(--line-soft)", color: "var(--cream)" };
+  const labelClass = "text-[11px] uppercase tracking-wider mb-1 block";
+  const labelStyle = { color: "var(--cream-dim)" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-2xl border max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+        style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-[18px] font-semibold" style={{ color: "var(--cream)" }}>
+            {client ? "Edit Client" : "New Client"}
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--bg-mid)]" style={{ color: "var(--cream-dim)" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {/* Name */}
+          <div className="col-span-2">
+            <label className={labelClass} style={labelStyle}>Client Name *</label>
+            <input className={inputClass} style={inputStyle} value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Acme Corp" />
+          </div>
+
+          {/* Vertical */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Vertical</label>
+            <select className={inputClass} style={inputStyle} value={form.vertical} onChange={(e) => update("vertical", e.target.value)}>
+              {VERTICALS.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </div>
+
+          {/* Service Tier */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Service Tier</label>
+            <select className={inputClass} style={inputStyle} value={form.serviceTier} onChange={(e) => update("serviceTier", e.target.value)}>
+              {SERVICE_TIERS.map((t) => <option key={t.id} value={t.id}>{t.name} (${t.fee}/mo)</option>)}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Status</label>
+            <select className={inputClass} style={inputStyle} value={form.status} onChange={(e) => update("status", e.target.value)}>
+              {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+            </select>
+          </div>
+
+          {/* Health */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Health</label>
+            <select className={inputClass} style={inputStyle} value={form.health} onChange={(e) => update("health", e.target.value)}>
+              {HEALTHS.map((h) => <option key={h} value={h}>{h}</option>)}
+            </select>
+          </div>
+
+          {/* Contact Name */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Contact Name</label>
+            <input className={inputClass} style={inputStyle} value={form.contactName} onChange={(e) => update("contactName", e.target.value)} placeholder="John Smith" />
+          </div>
+
+          {/* Contact Email */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Contact Email</label>
+            <input className={inputClass} style={inputStyle} value={form.contactEmail} onChange={(e) => update("contactEmail", e.target.value)} placeholder="john@acme.com" />
+          </div>
+
+          {/* Contact Phone */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Contact Phone</label>
+            <input className={inputClass} style={inputStyle} value={form.contactPhone} onChange={(e) => update("contactPhone", e.target.value)} placeholder="303-555-0100" />
+          </div>
+
+          {/* Website */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Website</label>
+            <input className={inputClass} style={inputStyle} value={form.website} onChange={(e) => update("website", e.target.value)} placeholder="acme.com" />
+          </div>
+
+          {/* Monthly Fee */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Monthly Fee ($)</label>
+            <input type="number" className={inputClass} style={inputStyle} value={form.monthlyFee} onChange={(e) => update("monthlyFee", parseInt(e.target.value) || 0)} />
+          </div>
+
+          {/* Annual Fee */}
+          <div>
+            <label className={labelClass} style={labelStyle}>Annual Fee ($)</label>
+            <input type="number" className={inputClass} style={inputStyle} value={form.annualFee} onChange={(e) => update("annualFee", parseInt(e.target.value) || 0)} />
+          </div>
+
+          {/* Auto Renew */}
+          <div className="col-span-2 flex items-center gap-2">
+            <input type="checkbox" checked={form.autoRenew} onChange={(e) => update("autoRenew", e.target.checked)} id="autoRenew" />
+            <label htmlFor="autoRenew" className="text-[13px]" style={{ color: "var(--cream-dim)" }}>Auto-renew contract</label>
+          </div>
+
+          {/* Notes */}
+          <div className="col-span-2">
+            <label className={labelClass} style={labelStyle}>Notes</label>
+            <textarea className={inputClass} style={inputStyle} rows={3} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Context, pilot results, renewal status..." />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => onSave(form)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition"
+            style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+          >
+            <Save size={14} /> {client ? "Update Client" : "Create Client"}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-[13px] border transition"
+            style={{ borderColor: "var(--line-soft)", color: "var(--cream-dim)" }}
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

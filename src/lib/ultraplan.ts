@@ -37,7 +37,7 @@ export const ULTRAPLAN: PlanPhase[] = [
   {
     id: 2,
     name: "Client CRUD with Real Forms",
-    status: "pending",
+    status: "completed",
     goal: "Full create-read-update-delete for clients with real form inputs, validation, and persistence.",
     doneTest: "Create a client via the UI form, edit it, delete it, verify all changes persist in DB.",
     tasks: [
