@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.docker
+*.log
+.DS_Store
+.next/cache

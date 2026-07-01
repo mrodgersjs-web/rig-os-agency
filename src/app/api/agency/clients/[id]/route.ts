@@ -1,44 +1,43 @@
 import { NextResponse } from "next/server";
-import { getClient, updateClient, deleteClient } from "@/lib/agency-store";
+import { dbGetClient, dbUpdateClient, dbDeleteClient } from "@/lib/db";
+import type { Client } from "@/lib/agency-types";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/agency/clients/[id] — get a single client
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const client = await getClient(id);
-  if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
-  return NextResponse.json({ client });
-}
-
-// PUT /api/agency/clients/[id] — update a client
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const updated = await updateClient(id, body);
-    if (!updated) return NextResponse.json({ error: "Client not found" }, { status: 404 });
-    return NextResponse.json({ client: updated, success: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const client = dbGetClient(id);
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+    return NextResponse.json({ client });
+  } catch (error) {
+    console.error("Client GET error:", error);
+    return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
   }
 }
 
-// DELETE /api/agency/clients/[id] — delete a client
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const deleted = await deleteClient(id);
-  if (!deleted) return NextResponse.json({ error: "Client not found" }, { status: 404 });
-  return NextResponse.json({ success: true });
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const updates = await request.json();
+    dbUpdateClient(id, updates as Partial<Client>);
+    const updated = dbGetClient(id);
+    return NextResponse.json({ success: true, client: updated });
+  } catch (error) {
+    console.error("Client PUT error:", error);
+    return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    dbDeleteClient(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Client DELETE error:", error);
+    return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
+  }
 }

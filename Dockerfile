@@ -40,6 +40,12 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
+# Create data directory with write permissions
+RUN mkdir -p /app/data && chown -R rigos:rigos /app/data
+
+# Copy entrypoint script and fix permissions
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
 # Copy any needed config
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/package.json ./
@@ -51,4 +57,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 USER rigos
 EXPOSE 3737
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

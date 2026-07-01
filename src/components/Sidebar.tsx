@@ -43,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/rig-harness",   label: "Harnesses",      icon: <Command size={16} />,      accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
   { href: "/rig-deviation", label: "Deviation Engines", icon: <Layers size={16} />,   accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
   { href: "/rig-proof",     label: "Proof Packets",   icon: <Activity size={16} />,     accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
+  { href: "/ultraplan",     label: "Ultraplan",       icon: <Rocket size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
 
   // Agents (existing)
   { href: "/claude",   label: "Claude",   icon: <AgentAvatar agent="claude" size={22} />,   accent: "#d97757", dim: "rgba(217,119,87,0.16)" },
@@ -99,6 +100,7 @@ const SECTION_MAP: Record<string, string> = {
   "/rig-harness": "RIG Doctrine",
   "/rig-deviation": "RIG Doctrine",
   "/rig-proof": "RIG Doctrine",
+  "/ultraplan": "RIG Doctrine",
   "/claude": "Agents",
   "/openclaw": "Agents",
   "/hermes": "Agents",
