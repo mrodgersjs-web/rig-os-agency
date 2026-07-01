@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { dbGetClients, dbCreateClient, dbUpdateClient, dbDeleteClient } from "@/lib/agency-store";
+import { VERTICALS, SERVICE_TIERS } from "@/lib/agency-data";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/agency/clients — list all clients
+// GET /api/agency/clients — list all clients with verticals and tiers
 export async function GET() {
   const clients = await dbGetClients();
-  return NextResponse.json({ clients });
+  return NextResponse.json({ clients, verticals: VERTICALS, serviceTiers: SERVICE_TIERS });
 }
 
 // POST /api/agency/clients — create a new client
