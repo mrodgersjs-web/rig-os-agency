@@ -1,90 +1,50 @@
 import { NextResponse } from "next/server";
-import {
-  loadProposals,
-  createProposal,
-  updateProposal,
-  deleteProposal,
-} from "@/lib/agency-store";
-import { loadClients } from "@/lib/agency-store";
+import { dbGetProposals, dbCreateProposal } from "@/lib/db";
+import { getTemplates, getTemplate } from "@/lib/proposal-templates";
 import { VERTICALS } from "@/lib/agency-data";
+import type { Proposal } from "@/lib/agency-types";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/agency/proposals — list all proposals with verticals
 export async function GET() {
   try {
-    const proposals = await loadProposals();
-    return NextResponse.json({ proposals, verticals: VERTICALS });
-  } catch {
-    return NextResponse.json({ proposals: [], verticals: VERTICALS });
+    const proposals = dbGetProposals();
+    const templates = getTemplates();
+    return NextResponse.json({ proposals, templates, verticals: VERTICALS });
+  } catch (error) {
+    console.error("Proposals GET error:", error);
+    return NextResponse.json({ error: "Failed to load proposals" }, { status: 500 });
   }
 }
 
-// POST /api/agency/proposals — create a new proposal
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!body.clientId || !body.scope) {
-      return NextResponse.json(
-        { error: "Missing required fields: clientId, scope" },
-        { status: 400 }
-      );
-    }
-    const clients = await loadClients();
-    const client = clients.find((c) => c.id === body.clientId);
-    if (!client) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
-    }
-    const proposal = await createProposal({
-      clientId: body.clientId,
-      clientName: client.name,
-      vertical: client.vertical,
-      scope: body.scope,
-      monthlyFee: body.monthlyFee || 2500,
-      annualValue: body.annualValue || (body.monthlyFee || 2500) * 12,
+    const now = new Date().toISOString();
+    const validUntil = new Date(Date.now() + 30 * 86400000).toISOString();
+
+    // Auto-fill template if client has a vertical
+    const template = body.templateVertical ? getTemplate(body.templateVertical) : null;
+
+    const proposal: Proposal = {
+      id: `p${Date.now()}`,
+      clientId: body.clientId || "",
+      clientName: body.clientName || "Untitled",
+      vertical: body.vertical || body.templateVertical || "services",
+      scope: body.scope || template?.scope || "Custom AI engagement",
+      monthlyFee: body.monthlyFee || template?.pricing?.growth?.monthly || 5000,
+      annualValue: body.annualValue || (body.monthlyFee || 5000) * 12,
       status: body.status || "draft",
       sentDate: body.sentDate || null,
-      acceptedDate: body.acceptedDate || null,
-      validUntil:
-        body.validUntil ||
-        new Date(Date.now() + 30 * 86400000).toISOString(),
+      acceptedDate: null,
+      validUntil: body.validUntil || validUntil,
       proofPacketId: null,
-    });
+      createdAt: now,
+    };
+    dbCreateProposal(proposal);
     return NextResponse.json({ success: true, proposal }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  } catch (error) {
+    console.error("Proposals POST error:", error);
+    return NextResponse.json({ error: "Failed to create proposal" }, { status: 500 });
   }
-}
-
-// PATCH /api/agency/proposals — update a proposal
-export async function PATCH(request: Request) {
-  try {
-    const body = await request.json();
-    if (!body.id) {
-      return NextResponse.json({ error: "Missing proposal id" }, { status: 400 });
-    }
-    const { id, ...updates } = body;
-    const proposal = await updateProposal(id, updates);
-    if (!proposal) {
-      return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
-    }
-    return NextResponse.json({ success: true, proposal });
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-}
-
-// DELETE /api/agency/proposals?id=xxx
-export async function DELETE(request: Request) {
-  const url = new URL(request.url);
-  const id = url.searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
-  }
-  const deleted = await deleteProposal(id);
-  if (!deleted) {
-    return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
-  }
-  return NextResponse.json({ success: true });
 }

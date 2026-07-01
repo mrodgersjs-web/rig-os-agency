@@ -248,6 +248,21 @@ export function dbGetProposals(): Proposal[] {
   return rows.map(rowToProposal);
 }
 
+export function dbCreateProposal(p: Proposal): void {
+  const db = getDB();
+  db.prepare(`
+    INSERT INTO proposals (id, client_id, client_name, vertical, scope, monthly_fee, annual_value,
+      status, sent_date, accepted_date, valid_until, proof_packet_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(p.id, p.clientId, p.clientName, p.vertical, p.scope, p.monthlyFee, p.annualValue,
+    p.status, p.sentDate, p.acceptedDate, p.validUntil, p.proofPacketId, p.createdAt);
+}
+
+export function dbUpdateProposalStatus(id: string, status: string, acceptedDate: string | null): void {
+  const db = getDB();
+  db.prepare("UPDATE proposals SET status = ?, accepted_date = ? WHERE id = ?").run(status, acceptedDate, id);
+}
+
 export function dbGetContracts(): Contract[] {
   seedDB();
   const db = getDB();
