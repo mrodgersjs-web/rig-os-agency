@@ -1,128 +1,160 @@
 "use client";
 
-import Panel from "../../components/Panel";
+import { motion } from "framer-motion";
+import {
+  Wand2, Sparkles, Zap, Image as ImageIcon, Layers, Palette,
+  CheckCircle2, ArrowUpRight,
+} from "lucide-react";
+import Link from "next/link";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+};
+
+const DESIGN_TOKENS = [
+  { name: "--bg-deep", color: "#15101a", label: "Midnight base" },
+  { name: "--bg-card", color: "#251d2c", label: "Aubergine card" },
+  { name: "--cream", color: "#f3ebda", label: "Cream text" },
+  { name: "--gold", color: "#d4a574", label: "Gold accent" },
+  { name: "--emerald", color: "#5ab896", label: "Emerald success" },
+  { name: "--plum", color: "#c4607e", label: "Plum alert" },
+  { name: "--rust", color: "#c97c5e", label: "Rust warm" },
+  { name: "--gold-soft", color: "#e6c69a", label: "Gold soft" },
+];
+
+const CAPABILITIES = [
+  { name: "Site Builder", icon: <Layers size={16} />, desc: "Production sites engineered to outlast the engagement." },
+  { name: "Brand Assets", icon: <Palette size={16} />, desc: "Logo, palette, typography, motion language, voice." },
+  { name: "Design System", icon: <Wand2 size={16} />, desc: "Midnight Aubergine — tokens, components, primitives." },
+  { name: "Higgsfield Cinema", icon: <Sparkles size={16} />, desc: "Image generation via Cinema Studio 3.0. Mike soul IDs: 9257aaf0, a4c09954." },
+  { name: "Image Pipeline", icon: <ImageIcon size={16} />, desc: "16:9, cultural-parody style, NO TEXT in images, Mike IN every image." },
+  { name: "Reverse Render", icon: <Zap size={16} />, desc: "Retrofit existing sites with the RIG design system." },
+];
+
+const PROJECTS = [
+  { name: "rodgersintelligence.com", status: "live", accent: "var(--emerald)" },
+  { name: "RIG LinkedIn Creative", status: "daily", accent: "var(--gold)" },
+  { name: "RIG Agent OS Dashboard", status: "building", accent: "var(--gold-soft)" },
+  { name: "TransformFit UI", status: "design", accent: "#22d3ee" },
+];
 
 export default function RigDesignPage() {
   return (
-    <Panel title="RIG Design Studio" subtitle="Brand · Sites · Creative Direction · Higgsfield Cinema · Deviation-scored" accent="hermes">
-      <div style={{ padding: "2rem", maxWidth: 900 }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "1rem",
-          marginBottom: "2rem",
-        }}>
-          <Card label="Design System" value="Midnight Aubergine" accent="#a855f7" />
-          <Card label="Image Engine" value="Higgsfield 3.0" accent="#ec4899" />
-          <Card label="Mike Soul ID" value="9257aaf0" accent="#fbbf24" />
-          <Card label="BDF Target" value="≥85σ" accent="#10b981" />
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4 }}>
+        <div className="flex items-center gap-3 mb-2">
+          <Wand2 size={22} style={{ color: "var(--gold)" }} />
+          <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--cream-mute)", fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}>
+            Studios
+          </span>
         </div>
+        <h1 className="text-3xl tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}>
+          Design <span className="hand text-[1.2em]" style={{ color: "var(--gold)" }}>Studio</span>
+        </h1>
+        <p className="text-[14px] mt-2 max-w-2xl" style={{ color: "var(--cream-dim)" }}>
+          Brand · Sites · Creative Direction · Higgsfield Cinema. Midnight Aubergine design system.
+          BDF target ≥85σ. Every image Mike is IN. No text in images.
+        </p>
+      </motion.section>
 
-        <Section title="Design Capabilities">
-          <Tag>site-builder</Tag>
-          <Tag>brand-assets</Tag>
-          <Tag>design-system</Tag>
-          <Tag>higgsfield-cinema</Tag>
-          <Tag>image-generation</Tag>
-          <Tag>reverse-render</Tag>
-          <Tag>retrofit-studio</Tag>
-          <Tag>website-goal</Tag>
-        </Section>
-
-        <Section title="Design System Tokens">
-          <div style={{ marginTop: "1rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
-            <TokenSwatch name="--bg-mid" color="#15151a" />
-            <TokenSwatch name="--cream" color="#cbc6c0" />
-            <TokenSwatch name="--gold" color="#fbbf24" />
-            <TokenSwatch name="--claude" color="#d97757" />
-            <TokenSwatch name="--hermes" color="#60a5fa" />
-            <TokenSwatch name="--openclaw" color="#f472b6" />
-            <TokenSwatch name="--accent-cyan" color="#22d3ee" />
-            <TokenSwatch name="--line-soft" color="rgba(255,255,255,0.06)" />
-            <TokenSwatch name="--panel-border" color="rgba(255,255,255,0.08)" />
-          </div>
-        </Section>
-
-        <Section title="Higgsfield Cinema Studio">
-          <div style={{ marginTop: "1rem" }}>
-            <p style={{ color: "rgba(203,198,192,0.6)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-              Image generation pipeline via Higgsfield.ai Cinema Studio 3.0.
-              Soul IDs: <code style={{ color: "var(--gold)" }}>9257aaf0</code> (v3 cultural parody) · <code style={{ color: "var(--gold)" }}>a4c09954</code> (RIG brand)
-            </p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <Tag>NO TEXT in images</Tag>
-              <Tag>Mike IN every image</Tag>
-              <Tag>16:9 aspect</Tag>
-              <Tag>cultural-parody style</Tag>
+      {/* KPIs */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Design System", value: "Midnight Aubergine", icon: <Palette size={18} />, accent: "var(--gold)" },
+            { label: "Image Engine", value: "Higgsfield 3.0", icon: <Sparkles size={18} />, accent: "var(--plum)" },
+            { label: "Mike Soul ID", value: "9257aaf0", icon: <ImageIcon size={18} />, accent: "var(--gold-soft)" },
+            { label: "BDF Target", value: "≥85σ", icon: <Zap size={18} />, accent: "var(--emerald)" },
+          ].map((kpi) => (
+            <div key={kpi.label} className="rounded-xl p-4 border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ color: kpi.accent }}>{kpi.icon}</span>
+                <span className="text-[11px] uppercase tracking-wider" style={{ color: "var(--cream-dim)" }}>{kpi.label}</span>
+              </div>
+              <div className="text-[18px]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: kpi.accent }}>{kpi.value}</div>
             </div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* Design Tokens */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.1 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>I.</span> Design System Tokens
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {DESIGN_TOKENS.map((token) => (
+            <div key={token.name} className="rounded-xl p-3 border flex items-center gap-3" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <div className="w-8 h-8 rounded-md shrink-0 border" style={{ background: token.color, borderColor: "var(--line)" }} />
+              <div className="min-w-0">
+                <code className="text-[10px] block" style={{ color: "var(--cream-soft)" }}>{token.name}</code>
+                <span className="text-[10px]" style={{ color: "var(--cream-mute)" }}>{token.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* Capabilities */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.15 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>II.</span> Capabilities
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {CAPABILITIES.map((cap) => (
+            <div key={cap.name} className="rounded-xl p-4 border h-full" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <div className="grid place-items-center w-9 h-9 rounded-lg mb-3" style={{ background: "rgba(212,165,116,0.12)", color: "var(--gold)", border: "1px solid rgba(212,165,116,0.3)" }}>
+                {cap.icon}
+              </div>
+              <h3 className="text-[14px] font-semibold mb-1" style={{ color: "var(--cream)" }}>{cap.name}</h3>
+              <p className="text-[12px] leading-relaxed" style={{ color: "var(--cream-dim)" }}>{cap.desc}</p>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* Active Projects */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.2 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>III.</span> Active Projects
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="space-y-2">
+          {PROJECTS.map((p) => (
+            <div key={p.name} className="rounded-xl p-4 border flex items-center justify-between" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <span className="text-[14px] font-medium" style={{ color: "var(--cream)" }}>{p.name}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: `${p.accent === "var(--emerald)" ? "rgba(90,184,150,0.15)" : "rgba(212,165,116,0.15)"}`, color: p.accent }}>
+                {p.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* Image Rules */}
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.25 }}>
+        <div className="rounded-xl p-5 border" style={{ background: "var(--bg-card)", borderColor: "var(--line)" }}>
+          <h3 className="text-[14px] font-semibold mb-3" style={{ color: "var(--cream)" }}>Image Generation Rules</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {["NO TEXT in images", "Mike IN every image", "16:9 aspect ratio", "Cultural-parody style"].map((rule) => (
+              <div key={rule} className="flex items-center gap-2">
+                <CheckCircle2 size={14} style={{ color: "var(--emerald)" }} />
+                <span className="text-[12px]" style={{ color: "var(--cream-soft)" }}>{rule}</span>
+              </div>
+            ))}
           </div>
-        </Section>
-
-        <Section title="Active Projects">
-          <div style={{ marginTop: "1rem" }}>
-            <ProjectRow name="rodgersintelligence.com" status="live" />
-            <ProjectRow name="RIG LinkedIn Creative" status="daily" />
-            <ProjectRow name="RIG App Studio UI" status="in-progress" />
-          </div>
-        </Section>
-      </div>
-    </Panel>
-  );
-}
-
-function Card({ label, value, accent }: { label: string; value: string; accent: string }) {
-  return (
-    <div style={{
-      padding: "1rem",
-      borderRadius: "0.75rem",
-      background: "rgba(28,33,45,0.35)",
-      border: `1px solid ${accent}33`,
-    }}>
-      <div style={{ fontSize: "0.7rem", color: "rgba(203,198,192,0.5)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.4rem" }}>{label}</div>
-      <div style={{ fontSize: "1.1rem", fontWeight: 600, color: accent }}>{value}</div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: "1.5rem" }}>
-      <h3 style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(203,198,192,0.7)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.6rem" }}>{title}</h3>
-      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{
-      padding: "0.25rem 0.6rem",
-      borderRadius: "0.4rem",
-      background: "rgba(168,85,247,0.1)",
-      border: "1px solid rgba(168,85,247,0.2)",
-      fontSize: "0.75rem",
-      color: "#c4b5fd",
-    }}>{children}</span>
-  );
-}
-
-function TokenSwatch({ name, color }: { name: string; color: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", borderRadius: "0.5rem", background: "rgba(28,33,45,0.35)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ width: 24, height: 24, borderRadius: 4, background: color, border: "1px solid rgba(255,255,255,0.1)" }} />
-      <code style={{ fontSize: "0.7rem", color: "rgba(203,198,192,0.7)" }}>{name}</code>
-    </div>
-  );
-}
-
-function ProjectRow({ name, status }: { name: string; status: string }) {
-  const colors: Record<string, string> = { live: "#10b981", daily: "#fbbf24", "in-progress": "#60a5fa" };
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-      <span style={{ fontSize: "0.85rem", color: "rgba(203,198,192,0.8)" }}>{name}</span>
-      <span style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem", borderRadius: "0.3rem", background: `${colors[status]}20`, color: colors[status], border: `1px solid ${colors[status]}40` }}>{status}</span>
+        </div>
+      </motion.section>
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
   Workflow, Route, Shield, Activity, Briefcase, Rocket, Layers,
   Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
   Command, Boxes, FileText, Scale, Mail,
+  CreditCard, Wallet, Megaphone, Share2, Eye, Search, History,
+  Newspaper, DoorOpen, Bot, HardDrive,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import AgentAvatar from "./AgentAvatar";

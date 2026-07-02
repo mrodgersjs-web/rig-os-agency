@@ -10,8 +10,9 @@ export interface Site {
   postsDir: string;
 }
 
-// The 5-site SEO funnel, mirrored from the blog-post.md skill.
+// The SEO pipeline sites — rodgersintelligence.com added as primary RIG site
 export const SITES: Site[] = [
+  { id: "rodgersintelligence", name: "rodgersintelligence.com", url: "https://rodgersintelligence.com", path: path.join(os.homedir(), "Developer", "RIG-Vault", "sites", "rodgersintelligence"), postsDir: path.join(os.homedir(), "Developer", "RIG-Vault", "sites", "rodgersintelligence", "src", "blog", "posts") },
   { id: "bestaiagentcommunity",  name: "bestaiagentcommunity.com",   url: "https://bestaiagentcommunity.com",  path: path.join(os.homedir(), "AIProfitBoardroom.com"),         postsDir: path.join(os.homedir(), "AIProfitBoardroom.com", "src/blog/posts") },
   { id: "aiprofitboardroom",     name: "aiprofitboardroom.com",      url: "https://aiprofitboardroom.com",     path: path.join(os.homedir(), "AIProfitBoardroom-main"),         postsDir: path.join(os.homedir(), "AIProfitBoardroom-main", "src/blog/posts") },
   { id: "juliangoldieautomation", name: "juliangoldieaiautomation.com", url: "https://juliangoldieaiautomation.com", path: path.join(os.homedir(), "juliangoldieaiautomation"), postsDir: path.join(os.homedir(), "juliangoldieaiautomation", "src/blog/posts") },

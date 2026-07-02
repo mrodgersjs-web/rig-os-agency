@@ -1,109 +1,152 @@
 "use client";
 
-import Panel from "../../components/Panel";
+import { motion } from "framer-motion";
+import {
+  TrendingUp, Target, Shield, GitBranch, Layers, Activity,
+  ArrowUpRight,
+} from "lucide-react";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+};
+
+const POWERS = [
+  { power: "Scale economies", status: "building" },
+  { power: "Network effects", status: "active" },
+  { power: "Counter-positioning", status: "active" },
+  { power: "Switching costs", status: "planning" },
+  { power: "Branding", status: "active" },
+  { power: "Cornered resource", status: "building" },
+  { power: "Process power", status: "active" },
+];
+
+const MEMOS = [
+  { title: "RIG GTM: Fractional CAIO positioning", coord: "L4-D2-A3-S", date: "2026-07-01" },
+  { title: "RIG LinkedIn: 8-vertical content engine", coord: "L3-D2-A2-S", date: "2026-07-01" },
+  { title: "RIG App: Agent OS as control plane", coord: "L5-D1-A3-S", date: "2026-07-01" },
+];
+
+const LOOPS = ["strategy-7powers", "orthodoxy-map", "scenario-tree", "mechanism-map", "decision-memo", "strategy-evolve"];
+const ORTHODOXIES = ["consulting = expensive", "AI = threat", "SMB = underserved", "fractional = niche", "content = marketing"];
+
+const STATUS_COLORS: Record<string, string> = { active: "var(--emerald)", building: "var(--gold)", planning: "var(--gold-soft)" };
 
 export default function RigStrategyPage() {
   return (
-    <Panel title="RIG Strategy Studio" subtitle="7 Powers · Orthodoxy Map · Scenario Tree · Mechanism Map · Decision Memo" accent="claude">
-      <div style={{ padding: "2rem", maxWidth: 900 }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "1rem",
-          marginBottom: "2rem",
-        }}>
-          <Card label="7 Powers" value="Active" accent="#ef4444" />
-          <Card label="Scenario Tree" value="regret-min" accent="#60a5fa" />
-          <Card label="Brier Gate" value="≤0.15" accent="#fbbf24" />
-          <Card label="RIG-L Target" value="≥5" accent="#10b981" />
+    <div className="space-y-8">
+      <motion.section {...fadeUp} transition={{ duration: 0.4 }}>
+        <div className="flex items-center gap-3 mb-2">
+          <TrendingUp size={22} style={{ color: "var(--gold)" }} />
+          <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--cream-mute)", fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}>
+            Studios
+          </span>
         </div>
+        <h1 className="text-3xl tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}>
+          Strategy <span className="hand text-[1.2em]" style={{ color: "var(--gold)" }}>Studio</span>
+        </h1>
+        <p className="text-[14px] mt-2 max-w-2xl" style={{ color: "var(--cream-dim)" }}>
+          7 Powers · Orthodoxy Map · Scenario Tree · Mechanism Map · Decision Memo.
+          Regret-min optimization. Brier gate ≤0.15. RIG-L ≥5.
+        </p>
+      </motion.section>
 
-        <Section title="Strategy Loops">
-          <Tag>strategy-7powers</Tag>
-          <Tag>orthodoxy-map</Tag>
-          <Tag>scenario-tree</Tag>
-          <Tag>mechanism-map</Tag>
-          <Tag>decision-memo</Tag>
-          <Tag>strategy-evolve</Tag>
-        </Section>
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "7 Powers", value: "Active", icon: <Shield size={18} />, accent: "var(--gold)" },
+            { label: "Scenario Tree", value: "regret-min", icon: <GitBranch size={18} />, accent: "var(--gold-soft)" },
+            { label: "Brier Gate", value: "≤0.15", icon: <Target size={18} />, accent: "var(--emerald)" },
+            { label: "RIG-L Target", value: "≥5", icon: <Activity size={18} />, accent: "var(--plum)" },
+          ].map((kpi) => (
+            <div key={kpi.label} className="rounded-xl p-4 border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ color: kpi.accent }}>{kpi.icon}</span>
+                <span className="text-[11px] uppercase tracking-wider" style={{ color: "var(--cream-dim)" }}>{kpi.label}</span>
+              </div>
+              <div className="text-[18px]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: kpi.accent }}>{kpi.value}</div>
+            </div>
+          ))}
+        </div>
+      </motion.section>
 
-        <Section title="7 Powers Analysis">
-          <div style={{ marginTop: "1rem" }}>
-            <PowerRow power="Scale economies" status="building" />
-            <PowerRow power="Network effects" status="active" />
-            <PowerRow power="Counter-positioning" status="active" />
-            <PowerRow power="Switching costs" status="planning" />
-            <PowerRow power="Branding" status="active" />
-            <PowerRow power="Cornered resource" status="building" />
-            <PowerRow power="Process power" status="active" />
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.1 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>I.</span> Strategy Loops
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {LOOPS.map((loop) => (
+            <span key={loop} className="text-[11px] px-3 py-1 rounded-full mono" style={{ background: "rgba(212,165,116,0.08)", border: "1px solid rgba(212,165,116,0.2)", color: "var(--gold-soft)" }}>
+              {loop}
+            </span>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.15 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>II.</span> 7 Powers Analysis
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="space-y-2">
+          {POWERS.map((p) => (
+            <div key={p.power} className="rounded-xl p-4 border flex items-center justify-between" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <span className="text-[14px] font-medium" style={{ color: "var(--cream)" }}>{p.power}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: `${STATUS_COLORS[p.status]}20`, color: STATUS_COLORS[p.status] }}>
+                {p.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.2 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>III.</span> Active Strategy Memos
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="space-y-2">
+          {MEMOS.map((m) => (
+            <div key={m.title} className="rounded-xl p-4 border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[14px] font-medium" style={{ color: "var(--cream)" }}>{m.title}</span>
+                  <span className="text-[10px] mono ml-2" style={{ color: "var(--cream-mute)" }}>{m.coord}</span>
+                </div>
+                <span className="text-[10px]" style={{ color: "var(--cream-dim)" }}>{m.date}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.25 }}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: "var(--cream-mute)" }}>
+            <span style={{ color: "var(--gold)" }}>IV.</span> Orthodoxy Map
+          </span>
+          <div className="flex-1 h-px" style={{ background: "var(--line-soft)" }} />
+        </div>
+        <div className="rounded-xl p-5 border" style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}>
+          <p className="text-[12px] mb-3" style={{ color: "var(--cream-dim)" }}>
+            20+ named orthodoxies mapped, each with anti-thesis and RIG mechanism.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ORTHODOXIES.map((o) => (
+              <span key={o} className="text-[11px] px-3 py-1 rounded-full" style={{ background: "rgba(196,96,126,0.08)", border: "1px solid rgba(196,96,126,0.2)", color: "var(--plum)" }}>
+                {o}
+              </span>
+            ))}
           </div>
-        </Section>
-
-        <Section title="Active Strategy Memos">
-          <div style={{ marginTop: "1rem" }}>
-            <MemoRow title="RIG GTM: Fractional CAIO positioning" coord="L4-D2-A3-S" date="2026-07-01" />
-            <MemoRow title="RIG LinkedIn: 8-vertical content engine" coord="L3-D2-A2-S" date="2026-07-01" />
-            <MemoRow title="RIG App: Agent OS as control plane" coord="L5-D1-A3-S" date="2026-07-01" />
-          </div>
-        </Section>
-
-        <Section title="Orthodoxy Map">
-          <div style={{ marginTop: "1rem" }}>
-            <p style={{ color: "rgba(203,198,192,0.6)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-              20+ named orthodoxies mapped, each with anti-thesis and RIG mechanism.
-            </p>
-            <Tag>consulting = expensive</Tag>
-            <Tag>AI = threat</Tag>
-            <Tag>SMB = underserved</Tag>
-            <Tag>fractional = niche</Tag>
-            <Tag>content = marketing</Tag>
-          </div>
-        </Section>
-      </div>
-    </Panel>
-  );
-}
-
-function Card({ label, value, accent }: { label: string; value: string; accent: string }) {
-  return (
-    <div style={{ padding: "1rem", borderRadius: "0.75rem", background: "rgba(28,33,45,0.35)", border: `1px solid ${accent}33` }}>
-      <div style={{ fontSize: "0.7rem", color: "rgba(203,198,192,0.5)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.4rem" }}>{label}</div>
-      <div style={{ fontSize: "1.1rem", fontWeight: 600, color: accent }}>{value}</div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginTop: "1.5rem" }}>
-      <h3 style={{ fontSize: "0.8rem", fontWeight: 600, color: "rgba(203,198,192,0.7)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.6rem" }}>{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return <span style={{ padding: "0.25rem 0.6rem", borderRadius: "0.4rem", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", fontSize: "0.75rem", color: "#fca5a5" }}>{children}</span>;
-}
-
-function PowerRow({ power, status }: { power: string; status: string }) {
-  const colors: Record<string, string> = { active: "#10b981", building: "#fbbf24", planning: "#60a5fa" };
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-      <span style={{ fontSize: "0.85rem", color: "rgba(203,198,192,0.8)" }}>{power}</span>
-      <span style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem", borderRadius: "0.3rem", background: `${colors[status]}20`, color: colors[status], border: `1px solid ${colors[status]}40` }}>{status}</span>
-    </div>
-  );
-}
-
-function MemoRow({ title, coord, date }: { title: string; coord: string; date: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-      <div>
-        <span style={{ fontSize: "0.85rem", color: "rgba(203,198,192,0.8)" }}>{title}</span>
-        <span style={{ fontSize: "0.7rem", color: "rgba(203,198,192,0.4)", marginLeft: "0.5rem" }}>{coord}</span>
-      </div>
-      <span style={{ fontSize: "0.7rem", color: "rgba(203,198,192,0.5)" }}>{date}</span>
+        </div>
+      </motion.section>
     </div>
   );
 }
