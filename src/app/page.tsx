@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Building2, Users, DollarSign, Shield, Boxes, Target, Server,
   Command, Layers, Activity, Zap, TrendingUp, Rocket, Briefcase,
-  ArrowUpRight, Cpu, GitBranch, Gauge, TrendingDown,
+  ArrowUpRight, Cpu, GitBranch, Gauge, TrendingDown, BarChart3,
 } from "lucide-react";
 
 const fadeUp = {
@@ -82,6 +82,7 @@ export default function CommandCenter() {
             { href: "/agency/proposals", title: "Proposals", desc: "Generate, track, and approve client proposals.", icon: <Briefcase size={18} />, accent: "#c4607e" },
             { href: "/agency/contracts", title: "Contracts & Invoices", desc: "Manage engagements, billing, and renewals.", icon: <Shield size={18} />, accent: "#c4607e" },
             { href: "/agency/spend", title: "Spend Reduction", desc: "Service costs, optimization opportunities, $8.7K annual savings.", icon: <TrendingDown size={18} />, accent: "#5ab896" },
+            { href: "/agency/ads", title: "Ads Performance", desc: "8 campaigns, 3 platforms, 8.6x blended ROAS, creative breakdowns.", icon: <BarChart3 size={18} />, accent: "#22d3ee" },
           ].map((card) => (
             <Link key={card.href} href={card.href} className="block group">
               <div
