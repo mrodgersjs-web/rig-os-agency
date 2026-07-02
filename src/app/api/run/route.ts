@@ -10,6 +10,12 @@ const ALLOWED: Record<AgentName, RegExp[]> = {
     /^-p$/, /^--output-format=stream-json$/, /^--include-partial-messages$/,
     /^--verbose$/, /^--print$/, /^--continue$/,
   ],
+  claudeModel: [
+    /^modal1$/, /^modal$/,
+    /^--version$/, /^--help$/,
+    /^-p$/, /^--output-format=stream-json$/, /^--include-partial-messages$/,
+    /^--verbose$/, /^--print$/, /^--continue$/,
+  ],
   openclaw: [
     /^health$/, /^doctor$/, /^logs$/, /^memory$/,
     /^agents$/, /^list$/, /^status$/,

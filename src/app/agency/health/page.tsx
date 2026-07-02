@@ -34,10 +34,26 @@ interface RIGHealth {
   githubRepos: number;
 }
 
+interface ModalHealth {
+  status: "ready" | "configured" | "pending_endpoint" | "pending_auth";
+  alias: string;
+  provider: string;
+  model: string;
+  gpu: string;
+  engine: string;
+  endpoint: string | null;
+  proxyUrl: string;
+  manualOnly: boolean;
+  endpointConfigured: boolean;
+  proxyReachable: boolean;
+  blockers: string[];
+}
+
 export default function SystemHealthPage() {
   const [system, setSystem] = useState<SystemHealth | null>(null);
   const [app, setApp] = useState<AppHealth | null>(null);
   const [rig, setRIG] = useState<RIGHealth | null>(null);
+  const [modal, setModal] = useState<ModalHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +65,7 @@ export default function SystemHealthPage() {
           setSystem(data.system);
           setApp(data.app);
           setRIG(data.rig);
+          setModal(data.modal);
         }
       } catch {
         // Use defaults
@@ -64,11 +81,15 @@ export default function SystemHealthPage() {
     { label: "API Routes", value: app?.apis ?? 145, icon: Server, color: "#5ab896" },
     { label: "Components", value: app?.components ?? 54, icon: Cpu, color: "#c084fc" },
     { label: "Lib Files", value: app?.libFiles ?? 54, icon: Terminal, color: "#fbbf24" },
-    { label: "Agents", value: rig?.agents ?? 408, icon: Activity, color: "#10b981" },
+    { label: "Agents", value: rig?.agents ?? 409, icon: Activity, color: "#10b981" },
     { label: "Skills", value: rig?.skills ?? 1202, icon: CheckCircle2, color: "#d4a574" },
     { label: "Goal Loops", value: rig?.goalLoops ?? 50, icon: Zap, color: "#ec4899" },
     { label: "GitHub Repos", value: rig?.githubRepos ?? 183, icon: GitBranch, color: "#8b5cf6" },
   ];
+
+  const modalReady = modal?.status === "ready";
+  const modalConfigured = modal?.status === "configured" || modalReady;
+  const modalLabel = modal?.status ? modal.status.replace("_", " ") : "pending endpoint";
 
   return (
     <div className="max-w-[1500px] mx-auto px-6 md:px-10 py-8">
@@ -127,12 +148,12 @@ export default function SystemHealthPage() {
           <h3 className="text-sm uppercase tracking-widest opacity-50 mb-4">RIG Infrastructure</h3>
           <div className="space-y-3">
             {[
-              { label: "Agent Registry", value: `${rig?.agents ?? 408} agents`, status: "active" },
+              { label: "Agent Registry", value: `${rig?.agents ?? 409} agents`, status: "active" },
               { label: "Goal Harnesses", value: `${rig?.goalLoops ?? 50} loops`, status: "active" },
               { label: "Deviation Engines", value: `${rig?.deviationEngines ?? 40} engines`, status: "active" },
               { label: "MCP Servers", value: `${rig?.mcpServers ?? 15} servers`, status: "active" },
               { label: "GitHub Repos", value: `${rig?.githubRepos ?? 183} repos`, status: "active" },
-              { label: "Modal Endpoint", value: "Pending token", status: "pending" },
+              { label: "Modal Endpoint", value: modalLabel, status: modalReady ? "active" : "pending" },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
                 <span className="text-sm opacity-70">{item.label}</span>
@@ -188,21 +209,26 @@ export default function SystemHealthPage() {
       {/* Modal Endpoint Status */}
       <div className="panel p-6 mt-6">
         <div className="flex items-center gap-3 mb-4">
-          <Server className="w-5 h-5" style={{ color: "#fbbf24" }} />
-          <h3 className="text-sm uppercase tracking-widest opacity-50">Modal B200 Endpoint</h3>
+          <Server className="w-5 h-5" style={{ color: modalReady ? "#10b981" : "#fbbf24" }} />
+          <h3 className="text-sm uppercase tracking-widest opacity-50">Modal1 Model Plane</h3>
         </div>
-        <div className="flex items-center gap-4 p-4 rounded-lg" style={{ background: "rgba(251,191,36,0.05)" }}>
-          <AlertCircle className="w-5 h-5" style={{ color: "#fbbf24" }} />
+        <div className="flex items-center gap-4 p-4 rounded-lg" style={{ background: modalReady ? "rgba(16,185,129,0.05)" : "rgba(251,191,36,0.05)" }}>
+          {modalReady ? (
+            <CheckCircle2 className="w-5 h-5" style={{ color: "#10b981" }} />
+          ) : (
+            <AlertCircle className="w-5 h-5" style={{ color: "#fbbf24" }} />
+          )}
           <div>
-            <div className="text-sm font-medium">Waiting for Modal authentication</div>
+            <div className="text-sm font-medium">{modalConfigured ? "Modal route configured" : "Modal endpoint not configured"}</div>
             <div className="text-xs opacity-50 mt-1">
-              Run <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: "rgba(255,255,255,0.05)" }}>modal token new</code> in your terminal to authenticate.
-              Then I'll deploy GLM-5.2-FP8 on 8xB200 GPUs.
+              <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: "rgba(255,255,255,0.05)" }}>claude-model modal1</code>
+              {" "}routes through {modal?.proxyUrl ?? "http://127.0.0.1:8766/v1"}.
+              {modal?.blockers?.length ? ` Blocked: ${modal.blockers.join("; ")}.` : " Ready for smoke tests."}
             </div>
           </div>
         </div>
         <div className="mt-4 text-xs opacity-40">
-          Endpoint spec: zai-org/GLM-5.2-FP8 · 8x NVIDIA B200 · SGLang v0.5.13 · EAGLE speculative decoding · FP8 KV cache · 32K chunked prefill
+          Endpoint spec: {modal?.model ?? "zai-org/GLM-5.2-FP8"} · 8x NVIDIA B200 · SGLang v0.5.13 · manual-only · endpoint {modal?.endpoint ?? "not set"}
         </div>
       </div>
     </div>

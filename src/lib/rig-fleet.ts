@@ -1,5 +1,5 @@
 // ── RIG OS Agency — Agent Fleet Registry ───────────────────────────
-// 232 Agency Agents + 86 RIG domain experts + VoltAgent subagents + 6 RIG core
+// 232 Agency Agents + 86 RIG domain experts + VoltAgent subagents + 7 RIG core
 // Client-safe: no fs/path/os imports. Static data only.
 
 export type AgentCategory = "agency" | "rig_expert" | "voltagent" | "rig_core";
@@ -19,6 +19,7 @@ export interface AgentEntry {
 export const RIG_CORE_AGENTS: AgentEntry[] = [
   { id: "hermes", name: "Hermes", category: "rig_core", role: "Conductor & research", capabilities: ["web", "terminal", "file", "browser", "delegation"], invocationPath: "hermes", status: "active" },
   { id: "claude", name: "Claude Code", category: "rig_core", role: "Architect & implementer", capabilities: ["code", "architecture", "review", "mcp"], invocationPath: "claude", status: "active" },
+  { id: "modal1", name: "Modal1", category: "rig_core", role: "Manual GPU model plane", capabilities: ["modal", "gpu", "openai-compatible", "swarm", "moe"], invocationPath: "claude-model modal1", status: "idle" },
   { id: "codex", name: "Codex CLI", category: "rig_core", role: "Verifier & builder", capabilities: ["compile", "test", "verify", "package"], invocationPath: "codex", status: "active" },
   { id: "openclaw", name: "OpenClaw / Jake", category: "rig_core", role: "Execution router", capabilities: ["route", "skills", "dispatch"], invocationPath: "openclaw", status: "active" },
   { id: "picode", name: "PiCode / PyCode", category: "rig_core", role: "Deterministic machinery", capabilities: ["python", "deterministic", "schemas"], invocationPath: "picode", status: "idle" },

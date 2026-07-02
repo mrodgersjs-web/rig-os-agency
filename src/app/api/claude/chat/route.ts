@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { prompt, cwd, ultracode, project, resumeRunId } = await req.json();
+  const { prompt, cwd, ultracode, project, resumeRunId, model } = await req.json();
   if (typeof prompt !== "string" || prompt.length === 0) {
     return new Response("missing prompt", { status: 400 });
   }
@@ -43,7 +43,10 @@ export async function POST(req: Request) {
   // run (parsing system/task_* + result events) and persist it so it's
   // replayable in the Workspace's Ultracode tab.
   const isUltra = ultracode === true || !!resumeRun?.ultracode;
-  const args: string[] = ["-p", "--model", CLAUDE_MODEL];
+  const requestedModel = typeof model === "string" ? model.trim().toLowerCase() : "";
+  const useModal1 = requestedModel === "modal1" || requestedModel === "modal";
+  const effectiveModel = useModal1 ? "modal1" : CLAUDE_MODEL;
+  const args: string[] = useModal1 ? ["modal1", "-p"] : ["-p", "--model", CLAUDE_MODEL];
   if (resumeSessionId) args.push("--resume", resumeSessionId);
   if (isUltra) args.push("--effort", "xhigh", "--include-hook-events");
   args.push(
@@ -53,7 +56,7 @@ export async function POST(req: Request) {
     prompt,
   );
 
-  const child = spawnStream("claude", args, { cwd: runCwd });
+  const child = spawnStream(useModal1 ? "claudeModel" : "claude", args, { cwd: runCwd });
 
   // Register the live process so the Stop button (a separate request) can kill
   // it by run id. Registered below once runId is known.
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
     run = newRun({
       id: runId,
       prompt,
-      model: CLAUDE_MODEL,
+      model: effectiveModel,
       ultracode: true,
       project: runCwd ? path.basename(runCwd) : undefined,
     });

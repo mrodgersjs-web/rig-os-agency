@@ -16,6 +16,7 @@ import os from "node:os";
 export interface AgenticConfig {
   // CLI binary paths
   claude: string | null;
+  claudeModel: string | null;
   openclaw: string | null;
   hermes: string | null;
   gemini: string | null;
@@ -83,6 +84,10 @@ function defaultVault(): string | null {
 
 export const config: AgenticConfig = {
   claude:   process.env.AGENTIC_OS_CLAUDE_BIN   ?? fileCfg.claude   ?? which("claude"),
+  claudeModel:
+    process.env.AGENTIC_OS_CLAUDE_MODEL_BIN
+    ?? (fileCfg as { claudeModelBin?: string; claudeModel?: string }).claudeModelBin
+    ?? which("claude-model"),
   openclaw: process.env.AGENTIC_OS_OPENCLAW_BIN ?? fileCfg.openclaw ?? which("openclaw"),
   hermes:   process.env.AGENTIC_OS_HERMES_BIN   ?? fileCfg.hermes   ?? which("hermes"),
   gemini:   process.env.AGENTIC_OS_GEMINI_BIN   ?? fileCfg.gemini   ?? which("gemini"),

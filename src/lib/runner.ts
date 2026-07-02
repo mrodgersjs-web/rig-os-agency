@@ -5,7 +5,7 @@ import { config } from "./config";
 // the local fcc-server proxy env vars injected, routing requests to OpenRouter
 // / NVIDIA NIM / Kimi / etc instead of api.anthropic.com.
 // "codex" is OpenAI's Codex CLI (≥ 0.125 — supports `codex exec --json` for streaming).
-export type AgentName = "claude" | "openclaw" | "hermes" | "gemini" | "antigravity" | "fcc" | "codex" | "ruflo" | "ant";
+export type AgentName = "claude" | "claudeModel" | "openclaw" | "hermes" | "gemini" | "antigravity" | "fcc" | "codex" | "ruflo" | "ant";
 
 function binFor(agent: AgentName): string {
   // fcc is a virtual agent — it spawns the regular claude binary, just with

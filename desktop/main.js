@@ -48,11 +48,12 @@ async function startApp() {
     return APP_URL;
   }
 
-  log("[rig-agent-os] Starting Next.js dev server...");
-  serverProcess = spawn("npx", ["next", "dev", "-p", String(APP_PORT)], {
+  log("[rig-agent-os] Starting Next.js production server...");
+  // Use production build (next start) instead of dev server for Electron compatibility
+  serverProcess = spawn("npx", ["next", "start", "-p", String(APP_PORT)], {
     cwd: APP_DIR,
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
     stdio: "pipe",
+    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
   });
 
   serverProcess.stdout?.on("data", (data) => {

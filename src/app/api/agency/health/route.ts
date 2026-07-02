@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getModalModelPlaneStatus } from "@/lib/modalModelPlane";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET() {
   const pageCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/app/src/app -name "page.tsx" 2>/dev/null | wc -l`)) || 0;
   const apiCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/app/src/app/api -name "route.ts" 2>/dev/null | wc -l`)) || 0;
   const appRunning = run(`curl -s -o /dev/null -w '%{http_code}' http://localhost:3737/ 2>/dev/null`) === '200';
+  const modal = await getModalModelPlaneStatus();
   
   return NextResponse.json({
     system: {
@@ -37,7 +39,7 @@ export async function GET() {
       buildStatus: "passing",
     },
     rig: {
-      agents: 408,
+      agents: 409,
       skills: 1202,
       goalLoops: 50,
       deviationEngines: 40,
@@ -56,11 +58,18 @@ export async function GET() {
       ],
     },
     modal: {
-      status: "pending_auth",
-      model: "zai-org/GLM-5.2-FP8",
+      status: modal.status,
+      alias: modal.alias,
+      provider: modal.provider,
+      model: modal.model,
       gpu: "8x B200",
       engine: "SGLang v0.5.13",
-      endpoint: null,
+      endpoint: modal.endpointHost,
+      proxyUrl: modal.proxyUrl,
+      manualOnly: modal.manualOnly,
+      endpointConfigured: modal.endpointConfigured,
+      proxyReachable: modal.proxyReachable,
+      blockers: modal.blockers,
     },
   });
 }

@@ -1,8 +1,8 @@
 // ── RIG OS Agency — Full Agent Registry ───────────────────────────
 // Auto-generated from agency-agents + voltagent + RIG core + RIG domain experts
 
-// Total agents: 408
-// Agency: 217 | VoltAgent: 172 | RIG Core: 6 | RIG Experts: 13
+// Total agents: 409
+// Agency: 217 | VoltAgent: 172 | RIG Core: 7 | RIG Experts: 13
 
 export type AgentCategory = "agency" | "rig_expert" | "voltagent" | "rig_core";
 export type AgentStatus = "active" | "idle" | "errored" | "unloaded";
@@ -47,6 +47,21 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
     ],
     "invocationPath": "claude",
     "status": "active",
+  },
+  {
+    "id": "modal1",
+    "name": "Modal1",
+    "category": "rig_core",
+    "role": "Manual GPU model plane",
+    "capabilities": [
+      "modal",
+      "gpu",
+      "openai-compatible",
+      "swarm",
+      "moe"
+    ],
+    "invocationPath": "claude-model modal1",
+    "status": "idle",
   },
   {
     "id": "codex",
@@ -3723,16 +3738,16 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
 
 export function getAgentStats() {
   return {
-    total: 408,
+    total: 409,
     byCategory: {
-      rig_core: 6,
+      rig_core: 7,
       agency: 217,
       voltagent: 172,
       rig_expert: 13,
     },
     byStatus: {
       active: 4,
-      idle: 2,
+      idle: 3,
       unloaded: 402,
     },
   };
