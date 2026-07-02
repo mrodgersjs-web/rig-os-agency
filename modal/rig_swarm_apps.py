@@ -230,7 +230,7 @@ def get_job(job_id: str) -> dict[str, Any]:
 
 
 @app.function(image=image, timeout=150)
-@modal.asgi_app()
+@modal.asgi_app(requires_proxy_auth=True)
 def web():
     return api
 

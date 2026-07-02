@@ -10,7 +10,7 @@ import {
   Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
   Command, Boxes, FileText, Scale, Mail,
   CreditCard, Wallet, Megaphone, Share2, Eye, Search, History,
-  Newspaper, DoorOpen, Bot, HardDrive,
+  Newspaper, DoorOpen, Bot, HardDrive, MailCheck,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import AgentAvatar from "./AgentAvatar";
@@ -40,6 +40,7 @@ const NAV: NavItem[] = [
   { href: "/agency/invoices",  label: "Invoices",    icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
   { href: "/agency/jobs",      label: "Jobs Tracker", icon: <Briefcase size={16} />,   accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/outreach",  label: "Outreach",     icon: <Mail size={16} />,        accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
+  { href: "/agency/email-tracking",  label: "Email Tracking", icon: <MailCheck size={16} />, accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
   { href: "/agency/social",    label: "Social Hub",    icon: <Share2 size={16} />,      accent: "#0a66c2", dim: "rgba(10,102,194,0.16)" },
   { href: "/agency/stripe",    label: "Stripe Center", icon: <CreditCard size={16} />,  accent: "#635bff", dim: "rgba(99,91,255,0.16)" },
   { href: "/agency/ads",       label: "Ad Campaigns",  icon: <Megaphone size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
@@ -117,6 +118,7 @@ const SECTION_MAP: Record<string, string> = {
   "/agency/contracts": "Agency",
   "/agency/invoices": "Agency",
   "/agency/outreach": "Agency",
+  "/agency/email-tracking": "Agency",
   "/agency/social": "Agency",
   "/agency/stripe": "Agency",
   "/agency/ads": "Agency",
