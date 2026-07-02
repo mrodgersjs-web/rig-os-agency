@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import LiveCommandBar from "@/components/LiveCommandBar";
 import BriefingCard from "@/components/BriefingCard";
+import QuickActions from "@/components/QuickActions";
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -43,6 +44,9 @@ export default function CommandCenter() {
 
       {/* Daily Briefing Card — priorities, revenue, overnight work */}
       <BriefingCard />
+
+      {/* Quick Actions — one-click navigation */}
+      <QuickActions />
 
       {/* KPI Row */}
       <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
