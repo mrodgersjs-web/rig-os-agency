@@ -38,7 +38,7 @@ export async function GET() {
   const remote = run(`cd ${tfPath} && git remote get-url origin 2>/dev/null`);
   
   // Check if deployed
-  const deployed = run(`curl -s -o /dev/null -w '%{http_code}' https://transformfit.app 2>/dev/null`);
+  const deployed = run(`curl -s -o /dev/null -w '%{http_code}' https://transformfit-web.vercel.app 2>/dev/null`);
   
   // Real pubspec info
   const pubspecPath = join(tfPath, 'pubspec.yaml');
@@ -74,7 +74,7 @@ export async function GET() {
       webBuildExists: buildExists,
       buildPath: join(tfPath, 'build', 'web'),
       deployed: deployed !== '404' && deployed !== '000' && deployed !== '',
-      deployedUrl: 'https://transformfit.app',
+      deployedUrl: 'https://transformfit-web.vercel.app',
       deployedStatus: deployed,
     },
     code: {
