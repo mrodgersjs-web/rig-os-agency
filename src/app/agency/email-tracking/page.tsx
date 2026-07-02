@@ -187,7 +187,7 @@ export default function EmailTrackingPage() {
       {/* ─── Header ─── */}
       <motion.section {...fadeUp} transition={{ duration: 0.4 }}>
         <div className="flex items-center gap-3 mb-2">
-          <MailOpen size={22} style={{ color: "var(--gold)" }} />
+          <MailCheck size={22} style={{ color: "var(--gold)" }} />
           <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--cream-mute)", fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}>
             Agency Operations
           </span>
@@ -233,7 +233,7 @@ export default function EmailTrackingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Total Sent", value: kpis.totalSent, icon: Send, color: "var(--cream-dim)", sub: `${kpis.totalContacts} contacts` },
-              { label: "Open Rate", value: formatPct(kpis.openRate), icon: MailOpen, color: "#a855f7", sub: `${kpis.totalOpened} opened` },
+              { label: "Open Rate", value: formatPct(kpis.openRate), icon: MailCheck, color: "#a855f7", sub: `${kpis.totalOpened} opened` },
               { label: "Reply Rate", value: formatPct(kpis.replyRate), icon: Reply, color: "var(--gold)", sub: `${kpis.totalReplied} replied` },
               { label: "Meeting Rate", value: formatPct(kpis.meetingRate), icon: Calendar, color: "var(--emerald)", sub: `${kpis.totalMeetings} booked` },
             ].map((kpi, i) => {

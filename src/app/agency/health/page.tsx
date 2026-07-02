@@ -56,9 +56,12 @@ export default function SystemHealthPage() {
   const [rig, setRIG] = useState<RIGHealth | null>(null);
   const [modal, setModal] = useState<ModalHealth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<string>("—");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     async function fetchHealth() {
+      setRefreshing(true);
       try {
         const res = await fetch("/api/agency/health");
         if (res.ok) {
@@ -72,9 +75,13 @@ export default function SystemHealthPage() {
         // Use defaults
       } finally {
         setLoading(false);
+        setRefreshing(false);
+        setLastUpdated(new Date().toLocaleTimeString());
       }
     }
     fetchHealth();
+    const interval = setInterval(fetchHealth, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const healthCards = [
@@ -95,13 +102,21 @@ export default function SystemHealthPage() {
   return (
     <div className="max-w-[1500px] mx-auto px-6 md:px-10 py-8">
       <header className="mb-8">
-        <div className="eyebrow mb-4">
-          <span className="num">∞</span>
-          <span className="line" />
-          <span className="label">System Health</span>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="eyebrow mb-4">
+              <span className="num">∞</span>
+              <span className="line" />
+              <span className="label">System Health</span>
+            </div>
+            <h1 className="page-title">System Health Monitor</h1>
+            <p className="page-subtitle">Real-time status of RIG OS Agency, infrastructure, and Mike's Mac Studio.</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs opacity-50" style={{ fontFamily: "'Manrope', sans-serif" }}>
+            <div className={`w-2 h-2 rounded-full ${refreshing ? "bg-yellow-400 animate-pulse" : "bg-emerald-500"}`} />
+            <span>Updated {lastUpdated}</span>
+          </div>
         </div>
-        <h1 className="page-title">System Health Monitor</h1>
-        <p className="page-subtitle">Real-time status of RIG OS Agency, infrastructure, and Mike's Mac Studio.</p>
       </header>
 
       {/* Health Cards Grid */}
