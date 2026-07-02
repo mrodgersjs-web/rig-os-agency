@@ -199,19 +199,20 @@ function ContractForm({ clients, onCreate, onClose }: {
   function selectClient(id: string) {
     const client = clients.find((c) => c.id === id);
     if (client) {
+      const tier = SERVICE_TIERS.find((t) => t.id === client.serviceTier);
       setForm((prev) => ({
         ...prev,
         clientId: client.id,
         clientName: client.name,
         type: client.serviceTier || "growth",
-        monthlyFee: client.monthlyFee || SERVICE_TIERS.growth?.monthlyFee || 5000,
+        monthlyFee: client.monthlyFee || tier?.monthlyFee || 5000,
       }));
     } else {
       update("clientId", id);
     }
   }
 
-  const tiers = Object.entries(SERVICE_TIERS);
+  const tiers = SERVICE_TIERS;
 
   return (
     <motion.div
@@ -273,13 +274,13 @@ function ContractForm({ clients, onCreate, onClose }: {
                 style={{ background: "var(--bg-mid)", borderColor: "var(--line-soft)", color: "var(--cream)" }}
                 value={form.type}
                 onChange={(e) => {
-                  const tier = SERVICE_TIERS[e.target.value as keyof typeof SERVICE_TIERS];
+                  const tier = SERVICE_TIERS.find((t) => t.id === e.target.value);
                   update("type", e.target.value);
                   if (tier) update("monthlyFee", tier.monthlyFee);
                 }}
               >
-                {tiers.map(([id, tier]) => (
-                  <option key={id} value={id}>{tier.name} — ${tier.monthlyFee}/mo</option>
+                {tiers.map((tier) => (
+                  <option key={tier.id} value={tier.id}>{tier.name} — ${tier.monthlyFee}/mo</option>
                 ))}
               </select>
             </div>
