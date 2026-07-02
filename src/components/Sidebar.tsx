@@ -76,6 +76,7 @@ const NAV: NavItem[] = [
   { href: "/paperclip", label: "Paperclip", icon: <Paperclip size={16} />, accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
   { href: "/journal",  label: "Journal",  icon: <BookOpen size={16} />,  accent: "#f59e0b", dim: "rgba(245,158,11,0.16)" },
   { href: "/memory",   label: "Memory",   icon: <Brain size={16} />,     accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
+  { href: "/obsidian", label: "Obsidian", icon: <BookOpen size={16} />,  accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
 
   // System
   { href: "/rig-ops",      label: "RIG Ops",         icon: <Shield size={16} />,    accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
@@ -127,6 +128,7 @@ const SECTION_MAP: Record<string, string> = {
   "/paperclip": "Self",
   "/journal": "Self",
   "/memory": "Self",
+  "/obsidian": "Self",
   "/rig-ops": "System",
   "/rig-lattice": "System",
   "/rig-1000x": "System",
