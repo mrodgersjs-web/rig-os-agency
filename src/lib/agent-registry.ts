@@ -1,8 +1,8 @@
 // ── RIG OS Agency — Full Agent Registry ───────────────────────────
 // Auto-generated from agency-agents + voltagent + RIG core + RIG domain experts
 
-// Total agents: 413
-// Agency: 217 | VoltAgent: 172 | RIG Core: 11 | RIG Experts: 13
+// Total agents: 423
+// Agency: 217 | VoltAgent: 172 | RIG Core: 21 | RIG Experts: 13
 
 export type AgentCategory = "agency" | "rig_expert" | "voltagent" | "rig_core";
 export type AgentStatus = "active" | "idle" | "errored" | "unloaded";
@@ -97,6 +97,96 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
     "role": "Review and proof worker lane",
     "capabilities": ["modal", "review", "security", "proofpacket"],
     "invocationPath": "claude-model modal-review",
+    "status": "idle",
+  },
+  {
+    "id": "modal-swarm-router",
+    "name": "Swarm Router",
+    "category": "rig_core",
+    "role": "Agency role router and 100-task planner",
+    "capabilities": ["modal", "swarm", "routing", "planning"],
+    "invocationPath": "claude-model modal-swarm-router",
+    "status": "idle",
+  },
+  {
+    "id": "modal-repo-map",
+    "name": "Repo Cartographer",
+    "category": "rig_core",
+    "role": "Repository mapping and onboarding lane",
+    "capabilities": ["modal", "repo-map", "architecture", "dependency-map"],
+    "invocationPath": "claude-model modal-repo-map",
+    "status": "idle",
+  },
+  {
+    "id": "modal-patch-factory",
+    "name": "Patch Factory",
+    "category": "rig_core",
+    "role": "Bounded code patch generation lane",
+    "capabilities": ["modal", "patches", "coding", "done-tests"],
+    "invocationPath": "claude-model modal-patch-factory",
+    "status": "idle",
+  },
+  {
+    "id": "modal-test-forge",
+    "name": "Test Forge",
+    "category": "rig_core",
+    "role": "Test generation and triage lane",
+    "capabilities": ["modal", "tests", "lint", "evals"],
+    "invocationPath": "claude-model modal-test-forge",
+    "status": "idle",
+  },
+  {
+    "id": "modal-build-farm",
+    "name": "Build Farm",
+    "category": "rig_core",
+    "role": "Parallel build and artifact lane",
+    "capabilities": ["modal", "build", "artifacts", "logs"],
+    "invocationPath": "claude-model modal-build-farm",
+    "status": "idle",
+  },
+  {
+    "id": "modal-review-gate",
+    "name": "Review Gate",
+    "category": "rig_core",
+    "role": "Correctness and merge-readiness lane",
+    "capabilities": ["modal", "review", "risk", "quality"],
+    "invocationPath": "claude-model modal-review-gate",
+    "status": "idle",
+  },
+  {
+    "id": "modal-security-sentinel",
+    "name": "Security Sentinel",
+    "category": "rig_core",
+    "role": "AppSec, secret, and compliance lane",
+    "capabilities": ["modal", "security", "appsec", "compliance"],
+    "invocationPath": "claude-model modal-security-sentinel",
+    "status": "idle",
+  },
+  {
+    "id": "modal-refactor-foundry",
+    "name": "Refactor Foundry",
+    "category": "rig_core",
+    "role": "AST refactor and migration lane",
+    "capabilities": ["modal", "refactor", "codemod", "migration"],
+    "invocationPath": "claude-model modal-refactor-foundry",
+    "status": "idle",
+  },
+  {
+    "id": "modal-ux-lab",
+    "name": "UX Lab",
+    "category": "rig_core",
+    "role": "Frontend, accessibility, and visual QA lane",
+    "capabilities": ["modal", "frontend", "accessibility", "screenshots"],
+    "invocationPath": "claude-model modal-ux-lab",
+    "status": "idle",
+  },
+  {
+    "id": "modal-docs-proof",
+    "name": "Docs Proof",
+    "category": "rig_core",
+    "role": "Docs, changelog, and ProofPacket lane",
+    "capabilities": ["modal", "docs", "proofpacket", "handoff"],
+    "invocationPath": "claude-model modal-docs-proof",
     "status": "idle",
   },
   {
@@ -3774,16 +3864,16 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
 
 export function getAgentStats() {
   return {
-    total: 413,
+    total: 423,
     byCategory: {
-      rig_core: 11,
+      rig_core: 21,
       agency: 217,
       voltagent: 172,
       rig_expert: 13,
     },
     byStatus: {
       active: 4,
-      idle: 7,
+      idle: 17,
       unloaded: 402,
     },
   };

@@ -81,7 +81,7 @@ export default function SystemHealthPage() {
     { label: "API Routes", value: app?.apis ?? 145, icon: Server, color: "#5ab896" },
     { label: "Components", value: app?.components ?? 54, icon: Cpu, color: "#c084fc" },
     { label: "Lib Files", value: app?.libFiles ?? 54, icon: Terminal, color: "#fbbf24" },
-    { label: "Agents", value: rig?.agents ?? 413, icon: Activity, color: "#10b981" },
+    { label: "Agents", value: rig?.agents ?? 423, icon: Activity, color: "#10b981" },
     { label: "Skills", value: rig?.skills ?? 1202, icon: CheckCircle2, color: "#d4a574" },
     { label: "Goal Loops", value: rig?.goalLoops ?? 50, icon: Zap, color: "#ec4899" },
     { label: "GitHub Repos", value: rig?.githubRepos ?? 183, icon: GitBranch, color: "#8b5cf6" },
@@ -148,7 +148,7 @@ export default function SystemHealthPage() {
           <h3 className="text-sm uppercase tracking-widest opacity-50 mb-4">RIG Infrastructure</h3>
           <div className="space-y-3">
             {[
-              { label: "Agent Registry", value: `${rig?.agents ?? 413} agents`, status: "active" },
+              { label: "Agent Registry", value: `${rig?.agents ?? 423} agents`, status: "active" },
               { label: "Goal Harnesses", value: `${rig?.goalLoops ?? 50} loops`, status: "active" },
               { label: "Deviation Engines", value: `${rig?.deviationEngines ?? 40} engines`, status: "active" },
               { label: "MCP Servers", value: `${rig?.mcpServers ?? 15} servers`, status: "active" },
