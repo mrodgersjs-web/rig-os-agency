@@ -31,6 +31,7 @@ const NAV: NavItem[] = [
   { href: "/agency/clients", label: "Clients",        icon: <Users size={16} />,        accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/pipeline", label: "Pipeline",      icon: <Workflow size={16} />,     accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/revenue",  label: "Revenue",       icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
+  { href: "/agency/revenue-command", label: "Revenue Command", icon: <Rocket size={16} />, accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
   { href: "/agency/proposals", label: "Proposals",    icon: <FileText size={16} />,     accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
   { href: "/agency/contracts", label: "Contracts",   icon: <Scale size={16} />,       accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
   { href: "/agency/invoices",  label: "Invoices",    icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
