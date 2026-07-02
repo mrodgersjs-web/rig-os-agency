@@ -1,8 +1,8 @@
 // ── RIG OS Agency — Full Agent Registry ───────────────────────────
 // Auto-generated from agency-agents + voltagent + RIG core + RIG domain experts
 
-// Total agents: 409
-// Agency: 217 | VoltAgent: 172 | RIG Core: 7 | RIG Experts: 13
+// Total agents: 413
+// Agency: 217 | VoltAgent: 172 | RIG Core: 11 | RIG Experts: 13
 
 export type AgentCategory = "agency" | "rig_expert" | "voltagent" | "rig_core";
 export type AgentStatus = "active" | "idle" | "errored" | "unloaded";
@@ -61,6 +61,42 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
       "moe"
     ],
     "invocationPath": "claude-model modal1",
+    "status": "idle",
+  },
+  {
+    "id": "modal-code",
+    "name": "Modal Code",
+    "category": "rig_core",
+    "role": "Heavy coding worker lane",
+    "capabilities": ["modal", "coding", "repo-editing", "swarm"],
+    "invocationPath": "claude-model modal-code",
+    "status": "idle",
+  },
+  {
+    "id": "modal-test",
+    "name": "Modal Test",
+    "category": "rig_core",
+    "role": "Test and eval worker lane",
+    "capabilities": ["modal", "tests", "lint", "evals", "regression"],
+    "invocationPath": "claude-model modal-test",
+    "status": "idle",
+  },
+  {
+    "id": "modal-build",
+    "name": "Modal Build",
+    "category": "rig_core",
+    "role": "Build and packaging worker lane",
+    "capabilities": ["modal", "build", "package", "artifacts"],
+    "invocationPath": "claude-model modal-build",
+    "status": "idle",
+  },
+  {
+    "id": "modal-review",
+    "name": "Modal Review",
+    "category": "rig_core",
+    "role": "Review and proof worker lane",
+    "capabilities": ["modal", "review", "security", "proofpacket"],
+    "invocationPath": "claude-model modal-review",
     "status": "idle",
   },
   {
@@ -3738,16 +3774,16 @@ export const FULL_AGENT_REGISTRY: AgentEntry[] = [
 
 export function getAgentStats() {
   return {
-    total: 409,
+    total: 413,
     byCategory: {
-      rig_core: 7,
+      rig_core: 11,
       agency: 217,
       voltagent: 172,
       rig_expert: 13,
     },
     byStatus: {
       active: 4,
-      idle: 3,
+      idle: 7,
       unloaded: 402,
     },
   };

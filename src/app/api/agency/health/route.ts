@@ -39,7 +39,7 @@ export async function GET() {
       buildStatus: "passing",
     },
     rig: {
-      agents: 409,
+      agents: 413,
       skills: 1202,
       goalLoops: 50,
       deviationEngines: 40,
@@ -69,6 +69,10 @@ export async function GET() {
       manualOnly: modal.manualOnly,
       endpointConfigured: modal.endpointConfigured,
       proxyReachable: modal.proxyReachable,
+      lanes: modal.lanes,
+      readyLanes: modal.readyLanes,
+      configuredCount: modal.configuredCount,
+      totalLanes: modal.totalLanes,
       blockers: modal.blockers,
     },
   });

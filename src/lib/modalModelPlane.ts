@@ -24,6 +24,10 @@ export interface ModalModelPlaneStatus {
   accountTokenIdPresent: boolean;
   accountTokenSecretPresent: boolean;
   proxyReachable: boolean;
+  lanes: ModalLaneStatus[];
+  readyLanes: string[];
+  configuredCount: number;
+  totalLanes: number;
   manualOnly: boolean;
   status: "ready" | "configured" | "pending_endpoint" | "pending_auth";
   blockers: string[];
@@ -32,6 +36,18 @@ export interface ModalModelPlaneStatus {
     proxyCheck: string;
     deploy: string;
   };
+}
+
+export interface ModalLaneStatus {
+  id: string;
+  kind: string;
+  purpose: string;
+  upstream_model: string;
+  endpoint_env: string;
+  model_env: string;
+  endpoint_configured: boolean;
+  endpoint_host: string;
+  manual_only: boolean;
 }
 
 function stripQuotes(value: string): string {
@@ -86,23 +102,29 @@ function endpointHost(value: string | undefined): string | null {
   }
 }
 
-async function probeProxy(proxyUrl: string): Promise<boolean> {
+async function probeProxy(proxyUrl: string): Promise<{ reachable: boolean; health?: Record<string, unknown> }> {
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (value: boolean) => {
+    const finish = (value: { reachable: boolean; health?: Record<string, unknown> }) => {
       if (settled) return;
       settled = true;
       resolve(value);
     };
     const req = request(`${proxyUrl.replace(/\/v1$/, "")}/healthz`, { method: "GET", timeout: 2000 }, (res) => {
-      res.resume();
-      finish(Boolean(res.statusCode && res.statusCode >= 200 && res.statusCode < 500));
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => { body += chunk; });
+      res.on("end", () => {
+        let health: Record<string, unknown> | undefined;
+        try { health = JSON.parse(body); } catch { /* ignore */ }
+        finish({ reachable: Boolean(res.statusCode && res.statusCode >= 200 && res.statusCode < 500), health });
+      });
     });
     req.on("timeout", () => {
       req.destroy();
-      finish(false);
+      finish({ reachable: false });
     });
-    req.on("error", () => finish(false));
+    req.on("error", () => finish({ reachable: false }));
     req.end();
   });
 }
@@ -118,7 +140,12 @@ export async function getModalModelPlaneStatus(): Promise<ModalModelPlaneStatus>
   const model = env.RIG_MODAL_MODEL || DEFAULT_MODEL;
   const endpoint = env.RIG_MODAL_ENDPOINT_URL;
   const endpointConfigured = Boolean(endpoint);
-  const proxyReachable = await probeProxy(proxyUrl);
+  const proxyProbe = await probeProxy(proxyUrl);
+  const proxyReachable = proxyProbe.reachable;
+  const lanes = Array.isArray(proxyProbe.health?.lanes) ? proxyProbe.health.lanes as ModalLaneStatus[] : [];
+  const readyLanes = Array.isArray(proxyProbe.health?.ready_lanes) ? proxyProbe.health.ready_lanes as string[] : [];
+  const configuredCount = typeof proxyProbe.health?.configured_count === "number" ? proxyProbe.health.configured_count : readyLanes.length;
+  const totalLanes = typeof proxyProbe.health?.total_lanes === "number" ? proxyProbe.health.total_lanes : lanes.length;
 
   const proxyTokenPresent = Boolean(
     (env.RIG_MODAL_PROXY_TOKEN_ID && env.RIG_MODAL_PROXY_TOKEN_SECRET)
@@ -155,6 +182,10 @@ export async function getModalModelPlaneStatus(): Promise<ModalModelPlaneStatus>
     accountTokenIdPresent,
     accountTokenSecretPresent,
     proxyReachable,
+    lanes,
+    readyLanes,
+    configuredCount,
+    totalLanes,
     manualOnly: true,
     status,
     blockers,
@@ -166,14 +197,14 @@ export async function getModalModelPlaneStatus(): Promise<ModalModelPlaneStatus>
   };
 }
 
-export async function smokeModal1(prompt = "reply OK"): Promise<Record<string, unknown>> {
+export async function smokeModal1(prompt = "reply OK", lane = "modal1"): Promise<Record<string, unknown>> {
   const status = await getModalModelPlaneStatus();
   const url = `${status.proxyUrl}/chat/completions`;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "modal1",
+      model: lane,
       messages: [{ role: "user", content: prompt.slice(0, 1000) }],
       max_tokens: 64,
       temperature: 0,

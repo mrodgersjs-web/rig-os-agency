@@ -1,5 +1,5 @@
 // ── RIG OS Agency — Agent Fleet Registry ───────────────────────────
-// 232 Agency Agents + 86 RIG domain experts + VoltAgent subagents + 7 RIG core
+// 232 Agency Agents + 86 RIG domain experts + VoltAgent subagents + 11 RIG core
 // Client-safe: no fs/path/os imports. Static data only.
 
 export type AgentCategory = "agency" | "rig_expert" | "voltagent" | "rig_core";
@@ -20,6 +20,10 @@ export const RIG_CORE_AGENTS: AgentEntry[] = [
   { id: "hermes", name: "Hermes", category: "rig_core", role: "Conductor & research", capabilities: ["web", "terminal", "file", "browser", "delegation"], invocationPath: "hermes", status: "active" },
   { id: "claude", name: "Claude Code", category: "rig_core", role: "Architect & implementer", capabilities: ["code", "architecture", "review", "mcp"], invocationPath: "claude", status: "active" },
   { id: "modal1", name: "Modal1", category: "rig_core", role: "Manual GPU model plane", capabilities: ["modal", "gpu", "openai-compatible", "swarm", "moe"], invocationPath: "claude-model modal1", status: "idle" },
+  { id: "modal-code", name: "Modal Code", category: "rig_core", role: "Heavy coding worker lane", capabilities: ["modal", "coding", "repo-editing", "swarm"], invocationPath: "claude-model modal-code", status: "idle" },
+  { id: "modal-test", name: "Modal Test", category: "rig_core", role: "Test and eval worker lane", capabilities: ["modal", "tests", "lint", "evals", "regression"], invocationPath: "claude-model modal-test", status: "idle" },
+  { id: "modal-build", name: "Modal Build", category: "rig_core", role: "Build and packaging worker lane", capabilities: ["modal", "build", "package", "artifacts"], invocationPath: "claude-model modal-build", status: "idle" },
+  { id: "modal-review", name: "Modal Review", category: "rig_core", role: "Review and proof worker lane", capabilities: ["modal", "review", "security", "proofpacket"], invocationPath: "claude-model modal-review", status: "idle" },
   { id: "codex", name: "Codex CLI", category: "rig_core", role: "Verifier & builder", capabilities: ["compile", "test", "verify", "package"], invocationPath: "codex", status: "active" },
   { id: "openclaw", name: "OpenClaw / Jake", category: "rig_core", role: "Execution router", capabilities: ["route", "skills", "dispatch"], invocationPath: "openclaw", status: "active" },
   { id: "picode", name: "PiCode / PyCode", category: "rig_core", role: "Deterministic machinery", capabilities: ["python", "deterministic", "schemas"], invocationPath: "picode", status: "idle" },

@@ -15,5 +15,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unsupported action" }, { status: 400 });
   }
   const prompt = typeof body.prompt === "string" ? body.prompt : "reply OK";
-  return NextResponse.json(await smokeModal1(prompt));
+  const lane = typeof body.lane === "string" ? body.lane : "modal1";
+  return NextResponse.json(await smokeModal1(prompt, lane));
 }
