@@ -1,0 +1,29 @@
+{
+  "name": "rig-agent-os-desktop",
+  "version": "3.0.0",
+  "description": "RIG Agent OS — Rodgers Intelligence Group Mission Control Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.rig.agent-os",
+    "productName": "RIG Agent OS",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "target": "dir"
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  }
+}
