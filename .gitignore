@@ -1,4 +1,4 @@
-app/
+/app/
 .next/
 node_modules/
 data/
@@ -8,3 +8,4 @@ desktop/release/
 desktop/node_modules/
 *.app/Contents/Frameworks/
 *.app/Contents/Resources/app.asar
+.env.local

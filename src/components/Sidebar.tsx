@@ -8,7 +8,7 @@ import {
   TrendingUp, Wand2, Columns3, NotebookText, Film, Network, Paperclip,
   Workflow, Route, Shield, Activity, Briefcase, Rocket, Layers,
   Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
-  Command, Boxes, FileText, Scale,
+  Command, Boxes, FileText, Scale, Mail,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import AgentAvatar from "./AgentAvatar";
@@ -35,6 +35,7 @@ const NAV: NavItem[] = [
   { href: "/agency/contracts", label: "Contracts",   icon: <Scale size={16} />,       accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
   { href: "/agency/invoices",  label: "Invoices",    icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
   { href: "/agency/jobs",      label: "Jobs Tracker", icon: <Briefcase size={16} />,   accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
+  { href: "/agency/outreach",  label: "Outreach",     icon: <Mail size={16} />,        accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
 
   // RIG Doctrine (NEW)
   { href: "/rig-doctrine",  label: "Doctrine",        icon: <Shield size={16} />,       accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
@@ -98,6 +99,7 @@ const SECTION_MAP: Record<string, string> = {
   "/agency/proposals": "Agency",
   "/agency/contracts": "Agency",
   "/agency/invoices": "Agency",
+  "/agency/outreach": "Agency",
   "/rig-doctrine": "RIG Doctrine",
   "/rig-fleet": "RIG Doctrine",
   "/rig-goals": "RIG Doctrine",
