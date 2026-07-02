@@ -76,6 +76,7 @@ export default function CommandCenter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { href: "/agency", title: "Agency Dashboard", desc: "Revenue, clients, pipeline, and ARR tracker.", icon: <Building2 size={18} />, accent: "#d4a574" },
+            { href: "/agency/offerings", title: "Offerings & Engagement", desc: "Three doors, ten ways to engage, eight verticals. RIG offerings from rodgersintelligence.com.", icon: <Rocket size={18} />, accent: "#d4a574" },
             { href: "/agency/clients", title: "Client Management", desc: "8 verticals, service tiers, health scores, contracts.", icon: <Users size={18} />, accent: "#5ab896" },
             { href: "/agency/pipeline", title: "Sales Pipeline", desc: "Kanban: prospect → qualified → proposal → closed.", icon: <TrendingUp size={18} />, accent: "#5ab896" },
             { href: "/agency/revenue", title: "Revenue Dashboard", desc: "ARR trajectory, MRR growth, churn, cash flow.", icon: <DollarSign size={18} />, accent: "#d4a574" },

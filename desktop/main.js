@@ -8,7 +8,7 @@ const path = require("path");
 const APP_NAME = "RIG Agent OS";
 const APP_PORT = 3737;
 const APP_URL = `http://127.0.0.1:${APP_PORT}`;
-const APP_DIR = path.join(os.homedir(), "Developer", "rig-os-agency", "app");
+const APP_DIR = path.join(os.homedir(), "Developer", "rig-os-agency");
 const LOG_DIR = path.join(os.homedir(), ".rig-agent-os", "logs");
 const DATA_DIR = path.join(os.homedir(), ".rig-agent-os", "data");
 
@@ -48,9 +48,9 @@ async function startApp() {
     return APP_URL;
   }
 
-  log("[rig-agent-os] Starting Next.js production server...");
-  // Use production build (next start) instead of dev server for Electron compatibility
-  serverProcess = spawn("npx", ["next", "start", "-p", String(APP_PORT)], {
+  log("[rig-agent-os] Starting Next.js dev server...");
+  // Use dev server — Next.js 16 Turbopack production build doesn't produce next-start-compatible output
+  serverProcess = spawn("npx", ["next", "dev", "-p", String(APP_PORT)], {
     cwd: APP_DIR,
     stdio: "pipe",
     env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
@@ -126,6 +126,7 @@ function createTray() {
     { label: "Open RIG Agent OS", click: () => { if (mainWindow) { mainWindow.show(); } else createWindow(); } },
     { type: "separator" },
     { label: "🤖 Mission Control", click: () => navigate("/agency") },
+    { label: "📦 Offerings", click: () => navigate("/agency/offerings") },
     { label: "☀️ Jarvis Briefing", click: () => navigate("/jarvis") },
     { label: "📊 GTM Pipeline", click: () => navigate("/rig-gtm") },
     { label: "💰 Revenue", click: () => navigate("/agency/stripe") },
@@ -176,6 +177,7 @@ function createMenu() {
     ]},
     { label: "Agency", submenu: [
       { label: "Mission Control", click: () => navigate("/agency") },
+      { label: "Offerings & Engagement", click: () => navigate("/agency/offerings") },
       { label: "Jarvis Briefing", click: () => navigate("/jarvis") },
       { label: "System Health", click: () => navigate("/agency/health") },
       { label: "GTM Pipeline", click: () => navigate("/rig-gtm") },

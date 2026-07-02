@@ -9,6 +9,7 @@ import {
 
 interface SystemHealth {
   diskFree: string;
+  loadAvg: string;
   processes: number;
   docker: string;
   colima: string;
@@ -77,14 +78,14 @@ export default function SystemHealthPage() {
   }, []);
 
   const healthCards = [
-    { label: "App Pages", value: app?.pages ?? 54, icon: GitBranch, color: "#4a9eff" },
-    { label: "API Routes", value: app?.apis ?? 145, icon: Server, color: "#5ab896" },
-    { label: "Components", value: app?.components ?? 54, icon: Cpu, color: "#c084fc" },
-    { label: "Lib Files", value: app?.libFiles ?? 54, icon: Terminal, color: "#fbbf24" },
-    { label: "Agents", value: rig?.agents ?? 423, icon: Activity, color: "#10b981" },
-    { label: "Skills", value: rig?.skills ?? 1202, icon: CheckCircle2, color: "#d4a574" },
-    { label: "Goal Loops", value: rig?.goalLoops ?? 50, icon: Zap, color: "#ec4899" },
-    { label: "GitHub Repos", value: rig?.githubRepos ?? 183, icon: GitBranch, color: "#8b5cf6" },
+    { label: "App Pages", value: app?.pages ?? "—", icon: GitBranch, color: "#4a9eff" },
+    { label: "API Routes", value: app?.apis ?? "—", icon: Server, color: "#5ab896" },
+    { label: "Components", value: app?.components ?? "—", icon: Cpu, color: "#c084fc" },
+    { label: "Lib Files", value: app?.libFiles ?? "—", icon: Terminal, color: "#fbbf24" },
+    { label: "Agents", value: rig?.agents ?? "—", icon: Activity, color: "#10b981" },
+    { label: "Skills", value: rig?.skills ?? "—", icon: CheckCircle2, color: "#d4a574" },
+    { label: "Goal Loops", value: rig?.goalLoops ?? "—", icon: Zap, color: "#ec4899" },
+    { label: "GitHub Repos", value: rig?.githubRepos ?? "—", icon: GitBranch, color: "#8b5cf6" },
   ];
 
   const modalReady = modal?.status === "ready";
@@ -126,7 +127,8 @@ export default function SystemHealthPage() {
           <h3 className="text-sm uppercase tracking-widest opacity-50 mb-4">Mac Studio</h3>
           <div className="space-y-3">
             {[
-              { label: "Disk Free", value: system?.diskFree ?? "183 GB", icon: HardDrive },
+              { label: "Disk Free", value: system?.diskFree ?? "—", icon: HardDrive },
+              { label: "Load Average", value: system?.loadAvg ?? "—", icon: Activity },
               { label: "Processes", value: system?.processes ?? "—", icon: Activity },
               { label: "Docker", value: system?.docker ?? "Running", icon: Server },
               { label: "Colima", value: system?.colima ?? "Running", icon: Cpu },
@@ -148,11 +150,11 @@ export default function SystemHealthPage() {
           <h3 className="text-sm uppercase tracking-widest opacity-50 mb-4">RIG Infrastructure</h3>
           <div className="space-y-3">
             {[
-              { label: "Agent Registry", value: `${rig?.agents ?? 423} agents`, status: "active" },
-              { label: "Goal Harnesses", value: `${rig?.goalLoops ?? 50} loops`, status: "active" },
-              { label: "Deviation Engines", value: `${rig?.deviationEngines ?? 40} engines`, status: "active" },
-              { label: "MCP Servers", value: `${rig?.mcpServers ?? 15} servers`, status: "active" },
-              { label: "GitHub Repos", value: `${rig?.githubRepos ?? 183} repos`, status: "active" },
+              { label: "Agent Registry", value: `${rig?.agents ?? "—"} agents`, status: "active" },
+              { label: "Goal Harnesses", value: `${rig?.goalLoops ?? "—"} loops`, status: "active" },
+              { label: "Deviation Engines", value: `${rig?.deviationEngines ?? "—"} engines`, status: "active" },
+              { label: "MCP Servers", value: `${rig?.mcpServers ?? "—"} servers`, status: "active" },
+              { label: "GitHub Repos", value: `${rig?.githubRepos ?? "—"} repos`, status: "active" },
               { label: "Modal Endpoint", value: modalLabel, status: modalReady ? "active" : "pending" },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>

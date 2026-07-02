@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
 
   // Agency Operations (NEW — $10M ARR engine)
   { href: "/agency",      label: "Agency Dashboard",  icon: <Building2 size={16} />,    accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
+  { href: "/agency/offerings", label: "Offerings",    icon: <Rocket size={16} />,       accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
   { href: "/agency/clients", label: "Clients",        icon: <Users size={16} />,        accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/pipeline", label: "Pipeline",      icon: <Workflow size={16} />,     accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/revenue",  label: "Revenue",       icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
@@ -93,6 +94,7 @@ const NAV: NavItem[] = [
 // Section groupings for labels
 const SECTION_MAP: Record<string, string> = {
   "/agency": "Agency",
+  "/agency/offerings": "Agency",
   "/agency/clients": "Agency",
   "/agency/pipeline": "Agency",
   "/agency/revenue": "Agency",

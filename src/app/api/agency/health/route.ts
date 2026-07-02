@@ -15,15 +15,19 @@ export async function GET() {
   }
   
   const diskFree = run(`df -h / | tail -1 | awk '{print $4}'`);
+  const loadAvg = run(`uptime | sed 's/.*load averages: //' | awk -F', ' '{print $1}'`);
   const processCount = parseInt(run(`ps aux | wc -l`)) || 0;
-  const pageCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/app/src/app -name "page.tsx" 2>/dev/null | wc -l`)) || 0;
-  const apiCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/app/src/app/api -name "route.ts" 2>/dev/null | wc -l`)) || 0;
+  const pageCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/app -name "page.tsx" -maxdepth 5 2>/dev/null | wc -l`)) || 0;
+  const apiCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/app/api -name "route.ts" -maxdepth 5 2>/dev/null | wc -l`)) || 0;
+  const componentCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/components -name "*.tsx" -maxdepth 3 2>/dev/null | wc -l`)) || 0;
+  const libCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/lib -name "*.ts" -maxdepth 2 2>/dev/null | wc -l`)) || 0;
   const appRunning = true;
   const modal = await getModalModelPlaneStatus();
   
   return NextResponse.json({
     system: {
       diskFree: diskFree,
+      loadAvg: loadAvg,
       processes: processCount,
       docker: run(`docker info --format '{{.ServerVersion}}' 2>/dev/null || echo 'not running'`),
       colima: run(`colima status --json 2>/dev/null || echo 'unknown'`),
@@ -33,8 +37,8 @@ export async function GET() {
     app: {
       pages: pageCount,
       apis: apiCount,
-      libFiles: 55,
-      components: 55,
+      libFiles: libCount,
+      components: componentCount,
       running: appRunning,
       buildStatus: "passing",
     },
