@@ -1,51 +1,137 @@
 import { NextResponse } from 'next/server';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { join } from 'path';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+function run(cmd: string): string {
+  try { return execSync(cmd, { timeout: 5000, encoding: 'utf-8' }).trim(); } catch { return ''; }
+}
 
 export async function GET() {
+  // Real Postiz status
+  const postizPath = '/Users/rig128gb/.hermes/node/bin/postiz';
+  const postizExists = existsSync(postizPath);
+  const postizEnvExists = existsSync('/Users/rig128gb/Desktop/rig-linkedin-studio/.postiz_env');
+  
+  // Real LinkedIn studio status
+  const linkedinStudioPath = '/Users/rig128gb/Desktop/rig-linkedin-studio';
+  const linkedinStudioExists = existsSync(linkedinStudioPath);
+  
+  // Real scheduler status
+  const schedulerRunning = run(`launchctl list 2>/dev/null | grep com.rig.jake-linkedin.scheduler`) || 'not loaded';
+  const dmMorning = run(`launchctl list 2>/dev/null | grep com.rig.linkedin.dm-morning`) || 'not loaded';
+  const dmAfternoon = run(`launchctl list 2>/dev/null | grep com.rig.linkedin.dm-afternoon`) || 'not loaded';
+  const dmEvening = run(`launchctl list 2>/dev/null | grep com.rig.linkedin.dm-evening`) || 'not loaded';
+  
+  // Real ai-company LinkedIn operator
+  const aiCompanyPath = '/Users/rig128gb/Developer/ai-company';
+  const operatorExists = existsSync(join(aiCompanyPath, 'engine', 'jake_linkedin_pipeline.py'));
+  const probeExists = existsSync(join(aiCompanyPath, 'scripts', 'probe_jake_capabilities.py'));
+  
+  // Real published posts — check for post files in the LinkedIn studio
+  let publishedPosts: string[] = [];
+  try {
+    // Check for published content in the LinkedIn studio
+    const publishDirs = [
+      join(linkedinStudioPath, 'published'),
+      join(linkedinStudioPath, 'posts', 'published'),
+      join(aiCompanyPath, 'proof', 'linkedin', 'published'),
+    ];
+    for (const dir of publishDirs) {
+      if (existsSync(dir)) {
+        publishedPosts = readdirSync(dir).filter(f => f.endsWith('.md') || f.endsWith('.json'));
+      }
+    }
+  } catch {}
+  
+  // Real queued posts — check Postiz or the studio
+  let queuedPosts: string[] = [];
+  try {
+    const queueDirs = [
+      join(linkedinStudioPath, 'queued'),
+      join(linkedinStudioPath, 'posts', 'queued'),
+    ];
+    for (const dir of queueDirs) {
+      if (existsSync(dir)) {
+        queuedPosts = readdirSync(dir).filter(f => f.endsWith('.md') || f.endsWith('.json'));
+      }
+    }
+  } catch {}
+  
+  // Real receipt ledger — the ONLY source of numbers per Mike's rule
+  const receiptLedgerPath = join(linkedinStudioPath, 'receipt_ledger.json');
+  let receiptData: any = null;
+  if (existsSync(receiptLedgerPath)) {
+    try { receiptData = JSON.parse(readFileSync(receiptLedgerPath, 'utf-8')); } catch {}
+  }
+  
+  // Real posts from the 40-post campaign
+  const campaignPath = join(linkedinStudioPath, 'posts');
+  let campaignPostCount = 0;
+  if (existsSync(campaignPath)) {
+    try {
+      campaignPostCount = readdirSync(campaignPath).filter(f => f.endsWith('.md')).length;
+    } catch {}
+  }
+  
+  // Real LinkedIn Co Page
+  const coPageId = '113349631';
+  const coPageUrl = 'https://linkedin.com/company/rodgersintelligence';
+  
+  // Honest: we cannot read live LinkedIn follower counts without LinkedIn API access
+  // Postiz has the API key but we don't have a direct way to query follower count
+  
   return NextResponse.json({
+    _truth: {
+      postizInstalled: postizExists,
+      postizAuthenticated: postizEnvExists,
+      linkedinStudioExists: linkedinStudioExists,
+      operatorExists: operatorExists,
+      probeExists: probeExists,
+      schedulerLoaded: schedulerRunning !== 'not loaded',
+      real: true,
+      note: 'Follower/engagement numbers require LinkedIn API — not available. Published/queued counts from local files only.',
+    },
     linkedin: {
-      followers: 4823, postsQueued: 20, postsThisWeek: 5, engagementRate: '7.2%',
-      posts: Array.from({ length: 20 }, (_, i) => ({
-        slot: i + 1,
-        topic: [
-          'How AI is transforming construction bid estimation', 'The $10M ARR playbook for AI agencies',
-          'Why generic AI content is killing your brand', '3 AI automations every law firm needs',
-          'How we achieved 89% OR utilization for a client', 'The RIG deviation engine framework explained',
-          'Why your CRM data is your biggest AI asset', 'Building anti-generic GTM pipelines',
-          'The future of dental AI scheduling', 'How to score leads with 87% accuracy',
-          'Cold email that actually converts: our framework', 'The 12-gate operator dossier system',
-          'Why most AI agencies fail (and how we won\'t)', 'Construction safety compliance with AI monitoring',
-          'The proof packet system: trust through evidence', 'How we reduced contract review time 70%',
-          'Building a $10M AI agency: month 4 update', 'The RIG 3D lattice: 588 execution cells',
-          'Why local-first beats cloud for AI ops', 'Our 50 goal loop fleet: how it works'
-        ][i],
-        status: i < 5 ? 'ready' : i < 12 ? 'drafting' : 'planned',
-        scheduledDate: `2026-07-${(i % 28) + 1}`
-      }))
+      coPageId: coPageId,
+      coPageUrl: coPageUrl,
+      followers: 'unknown — requires LinkedIn API',
+      publishedPostsFound: publishedPosts.length,
+      queuedPostsFound: queuedPosts.length,
+      campaignPosts: campaignPostCount,
+      scheduler: schedulerRunning !== 'not loaded' ? 'loaded' : 'not loaded',
+      dmServices: {
+        morning: dmMorning !== 'not loaded' ? 'loaded' : 'not loaded',
+        afternoon: dmAfternoon !== 'not loaded' ? 'loaded' : 'not loaded',
+        evening: dmEvening !== 'not loaded' ? 'loaded' : 'not loaded',
+      },
+      operator: operatorExists ? 'jake_linkedin_pipeline.py exists' : 'not found',
+      capabilityProbe: probeExists ? 'exists' : 'not found',
+      receiptLedger: receiptData ? 'exists' : 'not found',
+      publishedFromObsidian: 9, // From Obsidian session log — real but not live-verified
+      queuedFromObsidian: 34,  // From Obsidian session log — real but not live-verified
     },
     instagram: {
-      followers: 1247, postsThisWeek: 12, engagementRate: '8.4%', storyViews: 3400,
-      posts: [
-        { id: 'IG001', type: 'Reel', caption: 'AI fitness transformation reel', likes: 234, comments: 18, shares: 12, date: '2026-07-01' },
-        { id: 'IG002', type: 'Carousel', caption: 'Before/after workout AI', likes: 412, comments: 31, shares: 28, date: '2026-06-30' },
-        { id: 'IG003', type: 'Reel', caption: 'TransformFit demo walkthrough', likes: 189, comments: 14, shares: 8, date: '2026-06-29' },
-        { id: 'IG004', type: 'Story', caption: 'Daily motivation + app tip', likes: 67, comments: 5, shares: 3, date: '2026-06-28' },
-        { id: 'IG005', type: 'Post', caption: 'TransformFit: AI meets fitness', likes: 298, comments: 22, shares: 15, date: '2026-06-27' }
-      ],
-      nextPosts: [
-        { slot: 1, type: 'Reel', topic: 'TransformFit AI Coach demo', status: 'ready', scheduledDate: '2026-07-02' },
-        { slot: 2, type: 'Carousel', topic: '5 AI fitness trends for 2026', status: 'drafting', scheduledDate: '2026-07-03' },
-        { slot: 3, type: 'Story', topic: 'User transformation spotlight', status: 'ready', scheduledDate: '2026-07-03' },
-        { slot: 4, type: 'Reel', topic: 'How AI personalizes your workout', status: 'drafting', scheduledDate: '2026-07-04' },
-        { slot: 5, type: 'Post', topic: 'TransformFit x RIG partnership', status: 'planned', scheduledDate: '2026-07-05' },
-        { slot: 6, type: 'Story', topic: 'Behind the scenes: building TransformFit', status: 'planned', scheduledDate: '2026-07-05' },
-        { slot: 7, type: 'Reel', topic: '30-day AI fitness challenge', status: 'planned', scheduledDate: '2026-07-06' },
-        { slot: 8, type: 'Carousel', topic: 'Why AI coaching beats generic plans', status: 'planned', scheduledDate: '2026-07-07' },
-        { slot: 9, type: 'Story', topic: 'Community spotlight + Q&A', status: 'planned', scheduledDate: '2026-07-07' },
-        { slot: 10, type: 'Reel', topic: 'TransformFit results compilation', status: 'planned', scheduledDate: '2026-07-08' }
-      ]
+      followers: 'unknown — no Instagram API connected',
+      postsThisWeek: 0,
+      engagementRate: 'unknown — no Instagram API connected',
+      note: 'No Instagram API credentials or integration exists',
     },
-    twitter: { followers: 2103, postsThisWeek: 8, engagementRate: '4.1%', scheduled: 15 }
+    twitter: {
+      followers: 'unknown — no Twitter/X API connected',
+      postsThisWeek: 0,
+      engagementRate: 'unknown — no Twitter/X API connected',
+      note: 'No Twitter/X API credentials or integration exists',
+    },
+    postiz: {
+      installed: postizExists,
+      path: postizPath,
+      authenticated: postizEnvExists,
+      envFile: postizEnvExists ? '/Users/rig128gb/Desktop/rig-linkedin-studio/.postiz_env' : 'not found',
+    },
+    real: true,
   });
 }
