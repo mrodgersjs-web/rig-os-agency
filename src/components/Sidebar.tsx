@@ -57,10 +57,11 @@ const NAV: NavItem[] = [
   { href: "/agency/capabilities", label: "Capabilities", icon: <Cpu size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
 
   // RIG Orchestration (ENTERPRISE)
+  { href: "/fleet",         label: "Fleet Command",     icon: <Server size={16} />,       accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
   { href: "/orchestration",  label: "20-Agent Team",    icon: <Radio size={16} />,        accent: "#22c55e", dim: "rgba(34,197,94,0.16)" },
   { href: "/agency-agents",  label: "Agency Catalog",   icon: <Users size={16} />,        accent: "#4a9eff", dim: "rgba(74,158,255,0.16)" },
   { href: "/voltagents",     label: "VoltAgent Catalog", icon: <Zap size={16} />,         accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/paperclip",      label: "Paperclip 24/7",   icon: <Server size={16} />,       accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
+  { href: "/paperclip",      label: "Paperclip 24/7",   icon: <Boxes size={16} />,        accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
 
   // RIG Doctrine (NEW)
   { href: "/rig-doctrine",  label: "Doctrine",        icon: <Shield size={16} />,       accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
