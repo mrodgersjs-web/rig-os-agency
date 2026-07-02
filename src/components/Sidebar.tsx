@@ -10,7 +10,7 @@ import {
   Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
   Command, Boxes, FileText, Scale, Mail,
   CreditCard, Wallet, Megaphone, Share2, Eye, Search, History,
-  Newspaper, DoorOpen, Bot, HardDrive, MailCheck,
+  Newspaper, DoorOpen, Bot, HardDrive, MailCheck, Radio,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import AgentAvatar from "./AgentAvatar";
@@ -55,6 +55,12 @@ const NAV: NavItem[] = [
   { href: "/agency/spend",     label: "Spend Tracker", icon: <Wallet size={16} />,      accent: "#f97316", dim: "rgba(249,115,22,0.16)" },
   { href: "/agency/health",    label: "System Health", icon: <Activity size={16} />,    accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/capabilities", label: "Capabilities", icon: <Cpu size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
+
+  // RIG Orchestration (ENTERPRISE)
+  { href: "/orchestration",  label: "20-Agent Team",    icon: <Radio size={16} />,        accent: "#22c55e", dim: "rgba(34,197,94,0.16)" },
+  { href: "/agency-agents",  label: "Agency Catalog",   icon: <Users size={16} />,        accent: "#4a9eff", dim: "rgba(74,158,255,0.16)" },
+  { href: "/voltagents",     label: "VoltAgent Catalog", icon: <Zap size={16} />,         accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
+  { href: "/paperclip",      label: "Paperclip 24/7",   icon: <Server size={16} />,       accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
 
   // RIG Doctrine (NEW)
   { href: "/rig-doctrine",  label: "Doctrine",        icon: <Shield size={16} />,       accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
