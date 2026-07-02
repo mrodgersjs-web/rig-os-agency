@@ -7,6 +7,7 @@ import {
   Command, Layers, Activity, Zap, TrendingUp, Rocket, Briefcase,
   ArrowUpRight, Cpu, GitBranch, Gauge, TrendingDown, BarChart3,
 } from "lucide-react";
+import LiveCommandBar from "@/components/LiveCommandBar";
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -35,6 +36,9 @@ export default function CommandCenter() {
           Target: <span style={{ color: "var(--gold)", fontWeight: 600 }}>$10M ARR</span>.
         </p>
       </motion.section>
+
+      {/* Live Command Bar — real-time system data */}
+      <LiveCommandBar />
 
       {/* KPI Row */}
       <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
