@@ -1,0 +1,10 @@
+app/
+.next/
+node_modules/
+data/
+
+# Desktop build artifacts
+desktop/release/
+desktop/node_modules/
+*.app/Contents/Frameworks/
+*.app/Contents/Resources/app.asar
