@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
   { href: "/agency/proposals", label: "Proposals",    icon: <FileText size={16} />,     accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
   { href: "/agency/contracts", label: "Contracts",   icon: <Scale size={16} />,       accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
   { href: "/agency/invoices",  label: "Invoices",    icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
+  { href: "/agency/jobs",      label: "Jobs Tracker", icon: <Briefcase size={16} />,   accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
 
   // RIG Doctrine (NEW)
   { href: "/rig-doctrine",  label: "Doctrine",        icon: <Shield size={16} />,       accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
@@ -93,6 +94,7 @@ const SECTION_MAP: Record<string, string> = {
   "/agency/clients": "Agency",
   "/agency/pipeline": "Agency",
   "/agency/revenue": "Agency",
+  "/agency/jobs": "Agency",
   "/agency/proposals": "Agency",
   "/agency/contracts": "Agency",
   "/agency/invoices": "Agency",

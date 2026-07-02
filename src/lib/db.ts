@@ -270,11 +270,74 @@ export function dbGetContracts(): Contract[] {
   return rows.map(rowToContract);
 }
 
+export function dbCreateContract(c: Contract): void {
+  const db = getDB();
+  db.prepare(`
+    INSERT INTO contracts (id, client_id, client_name, type, monthly_fee, start_date, end_date,
+      auto_renew, status, terms, sla_hours, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(c.id, c.clientId, c.clientName, c.type, c.monthlyFee, c.startDate, c.endDate,
+    c.autoRenew ? 1 : 0, c.status, c.terms, c.slaHours, c.createdAt);
+}
+
+export function dbUpdateContractStatus(id: string, status: string): void {
+  const db = getDB();
+  db.prepare("UPDATE contracts SET status = ? WHERE id = ?").run(status, id);
+}
+
 export function dbGetInvoices(): Invoice[] {
   seedDB();
   const db = getDB();
   const rows = db.prepare("SELECT * FROM invoices ORDER BY created_at DESC").all() as Record<string, unknown>[];
   return rows.map(rowToInvoice);
+}
+
+export function dbCreateInvoice(inv: Invoice): void {
+  const db = getDB();
+  db.prepare(`
+    INSERT INTO invoices (id, client_id, client_name, amount, status, sent_date, paid_date,
+      due_date, line_items, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(inv.id, inv.clientId, inv.clientName, inv.amount, inv.status, inv.sentDate,
+    inv.paidDate, inv.dueDate, JSON.stringify(inv.lineItems || []), inv.createdAt);
+}
+
+export function dbUpdateInvoiceStatus(id: string, status: string, paidDate: string | null): void {
+  const db = getDB();
+  db.prepare("UPDATE invoices SET status = ?, paid_date = ? WHERE id = ?").run(status, paidDate, id);
+}
+
+export function dbGetClientContracts(clientId: string): Contract[] {
+  const db = getDB();
+  const rows = db.prepare("SELECT * FROM contracts WHERE client_id = ? ORDER BY created_at DESC").all(clientId) as Record<string, unknown>[];
+  return rows.map(rowToContract);
+}
+
+export function dbGenerateInvoicesFromContracts(): Invoice[] {
+  const contracts = dbGetContracts().filter(c => c.status === "active");
+  const now = new Date().toISOString();
+  const dueDate = new Date(Date.now() + 30 * 86400000).toISOString();
+  const generated: Invoice[] = [];
+  for (const c of contracts) {
+    const invId = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${c.clientId.slice(-4)}`;
+    const existing = dbGetInvoices().find(i => i.id === invId);
+    if (existing) continue;
+    const inv: Invoice = {
+      id: invId,
+      clientId: c.clientId,
+      clientName: c.clientName,
+      amount: c.monthlyFee,
+      status: "sent",
+      sentDate: now,
+      paidDate: null,
+      dueDate,
+      lineItems: [{ description: `${c.type} retainer — ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}`, amount: c.monthlyFee }],
+      createdAt: now,
+    };
+    dbCreateInvoice(inv);
+    generated.push(inv);
+  }
+  return generated;
 }
 
 export function dbGetPipelineDeals(): PipelineDeal[] {

@@ -6,9 +6,11 @@ import { promises as fs } from "fs";
 import path from "path";
 import type {
   Client, Proposal, Contract, Invoice, PipelineDeal,
+  JobApplication,
 } from "./agency-types";
 import {
   SEED_CLIENTS, SEED_PROPOSALS, SEED_CONTRACTS, SEED_INVOICES, SEED_PIPELINE,
+  SEED_JOBS,
 } from "./agency-data";
 
 // ── Data directory (absolute, safe for Next.js) ────────────────────
@@ -18,6 +20,7 @@ const PROPOSALS_FILE = path.join(DATA_DIR, "proposals.json");
 const CONTRACTS_FILE = path.join(DATA_DIR, "contracts.json");
 const INVOICES_FILE = path.join(DATA_DIR, "invoices.json");
 const PIPELINE_FILE = path.join(DATA_DIR, "pipeline.json");
+const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
 
 // ── Internal mutable in-memory store (synced from disk) ────────────
 let _clients: Client[] | null = null;
@@ -25,6 +28,7 @@ let _proposals: Proposal[] | null = null;
 let _contracts: Contract[] | null = null;
 let _invoices: Invoice[] | null = null;
 let _pipeline: PipelineDeal[] | null = null;
+let _jobs: JobApplication[] | null = null;
 
 // ── File helpers ──────────────────────────────────────────────────
 async function ensureDir(): Promise<void> {
@@ -311,6 +315,57 @@ export async function getDashboardKPIsFromStore() {
   };
 }
 
+// ── Job Applications ───────────────────────────────────────────────
+
+export async function loadJobs(): Promise<JobApplication[]> {
+  if (_jobs) return _jobs;
+  const data = await readJson<JobApplication[]>(JOBS_FILE, []);
+  if (data.length === 0) {
+    _jobs = [...SEED_JOBS];
+    await writeJson(JOBS_FILE, _jobs);
+  } else {
+    _jobs = data;
+  }
+  return _jobs;
+}
+
+export async function saveJobs(jobs: JobApplication[]): Promise<void> {
+  _jobs = jobs;
+  await writeJson(JOBS_FILE, jobs);
+}
+
+export async function createJobApplication(
+  job: Omit<JobApplication, "id" | "createdAt" | "updatedAt">
+): Promise<JobApplication> {
+  const jobs = await loadJobs();
+  const id = `job_${Date.now().toString(36)}`;
+  const now = new Date().toISOString();
+  const newJob: JobApplication = { ...job, id, createdAt: now, updatedAt: now };
+  const updated = [...jobs, newJob];
+  await saveJobs(updated);
+  return newJob;
+}
+
+export async function updateJobApplication(
+  id: string,
+  updates: Partial<JobApplication>
+): Promise<JobApplication | null> {
+  const jobs = await loadJobs();
+  const idx = jobs.findIndex((j) => j.id === id);
+  if (idx === -1) return null;
+  jobs[idx] = { ...jobs[idx], ...updates, id, updatedAt: new Date().toISOString() };
+  await saveJobs(jobs);
+  return jobs[idx];
+}
+
+export async function deleteJobApplication(id: string): Promise<boolean> {
+  const jobs = await loadJobs();
+  const filtered = jobs.filter((j) => j.id !== id);
+  if (filtered.length === jobs.length) return false;
+  await saveJobs(filtered);
+  return true;
+}
+
 // ── Reset to seed data ─────────────────────────────────────────────
 export async function resetToSeed(): Promise<void> {
   _clients = null;
@@ -318,6 +373,7 @@ export async function resetToSeed(): Promise<void> {
   _contracts = null;
   _invoices = null;
   _pipeline = null;
+  _jobs = null;
   await fs.rm(DATA_DIR, { recursive: true, force: true }).catch(() => {});
 }
 

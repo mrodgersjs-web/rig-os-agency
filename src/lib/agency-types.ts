@@ -1,5 +1,40 @@
 // ── RIG OS Agency — Core Types ──────────────────────────────────────
 
+export type JobStatus =
+  | "saved"
+  | "applied"
+  | "phone_screen"
+  | "interview"
+  | "final_round"
+  | "offer"
+  | "accepted"
+  | "rejected"
+  | "withdrawn";
+
+export type JobPriority = "low" | "medium" | "high" | "urgent";
+
+export interface JobApplication {
+  id: string;
+  company: string;
+  role: string;
+  location: string;
+  remote: boolean;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryNote: string;
+  jobUrl: string;
+  status: JobStatus;
+  priority: JobPriority;
+  appliedDate: string | null;
+  deadline: string | null;
+  contactName: string;
+  contactEmail: string;
+  source: string; // LinkedIn, Indeed, referral, cold outreach
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type VerticalId =
   | "construction"
   | "law"
