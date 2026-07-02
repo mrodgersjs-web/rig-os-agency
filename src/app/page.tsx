@@ -8,6 +8,7 @@ import {
   ArrowUpRight, Cpu, GitBranch, Gauge, TrendingDown, BarChart3,
 } from "lucide-react";
 import LiveCommandBar from "@/components/LiveCommandBar";
+import BriefingCard from "@/components/BriefingCard";
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -39,6 +40,9 @@ export default function CommandCenter() {
 
       {/* Live Command Bar — real-time system data */}
       <LiveCommandBar />
+
+      {/* Daily Briefing Card — priorities, revenue, overnight work */}
+      <BriefingCard />
 
       {/* KPI Row */}
       <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
