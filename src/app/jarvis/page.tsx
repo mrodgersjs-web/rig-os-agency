@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Volume2, Sun, Moon, Target, Hammer, Mail, Briefcase, TrendingUp, Megaphone, Search, FileText, Package, Globe, DollarSign, Cpu, Database, Linkedin, Activity, Instagram, FileCheck, Scissors, Heart, Clock, Github, Sparkles } from 'lucide-react';
+import { Play, Pause, Volume2, Sun, Moon, Target, Hammer, Mail, Briefcase, TrendingUp, Megaphone, Search, FileText, Package, Globe, DollarSign, Cpu, Database, Activity, FileCheck, Scissors, Heart, Clock, Sparkles } from 'lucide-react';
+import { LinkedinIcon, InstagramIcon, GithubIcon } from '@/components/BrandIcons';
 
 const iconMap: Record<string, any> = {
-  moon: Moon, target: Target, hammer: Hammer, mail: Mail, briefcase: Briefcase, 'trending-up': TrendingUp, megaphone: Megaphone, search: Search, 'file-text': FileText, package: Package, globe: Globe, 'dollar-sign': DollarSign, cpu: Cpu, database: Database, linkedin: Linkedin, activity: Activity, instagram: Instagram, 'file-check': FileCheck, scissors: Scissors, heart: Heart, clock: Clock, github: Github, sparkles: Sparkles
+  moon: Moon, target: Target, hammer: Hammer, mail: Mail, briefcase: Briefcase, 'trending-up': TrendingUp, megaphone: Megaphone, search: Search, 'file-text': FileText, package: Package, globe: Globe, 'dollar-sign': DollarSign, cpu: Cpu, database: Database, linkedin: LinkedinIcon, activity: Activity, instagram: InstagramIcon, 'file-check': FileCheck, scissors: Scissors, heart: Heart, clock: Clock, github: GithubIcon, sparkles: Sparkles
 };
 
 interface BriefingItem { text?: string; label?: string; value?: any; name?: string; company?: string; role?: string; status?: string; date?: string; priority?: string; component?: string; loop?: number; platform?: string; campaign?: string; spend?: number; impressions?: number; clicks?: number; conversions?: number; keyword?: string; position?: number; change?: string; source?: string; profiles?: number; dataGB?: number; slot?: number; topic?: string; scheduled?: string; module?: string; progress?: number; url?: string; seo?: string; client?: string; description?: string; value_num?: number; stage?: string; probability?: number; action?: string; area?: string; current?: number; potential?: number; savings?: number; recipient?: string; time?: string; schedule?: string; deliver?: string; emails?: number; opened?: number; replied?: number; post?: string; likes?: number; comments?: number; shares?: number; }

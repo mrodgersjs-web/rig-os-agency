@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Linkedin, Instagram, Twitter, Heart, MessageCircle, Share2, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Users, TrendingUp, Calendar } from 'lucide-react';
+import { LinkedinIcon, InstagramIcon, TwitterIcon } from '@/components/BrandIcons';
 
 export default function SocialPage() {
   const [data, setData] = useState<any>(null);
@@ -23,7 +24,7 @@ export default function SocialPage() {
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
           style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 20, border: '1px solid rgba(10,102,194,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Linkedin size={28} color="#0a66c2" />
+            <LinkedinIcon size={28} color="#0a66c2" />
             <h2 style={{ color: 'var(--cream)', fontWeight: 700, margin: 0 }}>LinkedIn</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -49,7 +50,7 @@ export default function SocialPage() {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
           style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 20, border: '1px solid rgba(236,72,153,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Instagram size={28} color="#ec4899" />
+            <InstagramIcon size={28} color="#ec4899" />
             <h2 style={{ color: 'var(--cream)', fontWeight: 700, margin: 0 }}>Instagram</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -87,7 +88,7 @@ export default function SocialPage() {
         <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }}
           style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 20, border: '1px solid rgba(29,155,240,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Twitter size={28} color="#1d9bf0" />
+            <TwitterIcon size={28} color="#1d9bf0" />
             <h2 style={{ color: 'var(--cream)', fontWeight: 700, margin: 0 }}>Twitter/X</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
