@@ -10,7 +10,8 @@ import {
   Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
   Command, Boxes, FileText, Scale, Mail,
   CreditCard, Wallet, Megaphone, Share2, Eye, Search, History,
-  Newspaper, DoorOpen, Bot, HardDrive, MailCheck, Radio,
+  Newspaper, DoorOpen, Bot, HardDrive, MailCheck, Radio, Anchor,
+  Camera, Terminal as TerminalIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import AgentAvatar from "./AgentAvatar";
@@ -52,6 +53,7 @@ const NAV: NavItem[] = [
   { href: "/agency/portals",   label: "Client Portals",icon: <DoorOpen size={16} />,    accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/agents",    label: "Agent Roster",  icon: <Bot size={16} />,         accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
   { href: "/agency/fleet",     label: "Fleet Ops",     icon: <Boxes size={16} />,       accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
+  { href: "/agency/harbor",    label: "Harbor Node",   icon: <Anchor size={16} />,      accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
   { href: "/agency/spend",     label: "Spend Tracker", icon: <Wallet size={16} />,      accent: "#f97316", dim: "rgba(249,115,22,0.16)" },
   { href: "/agency/health",    label: "System Health", icon: <Activity size={16} />,    accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
   { href: "/agency/capabilities", label: "Capabilities", icon: <Cpu size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
@@ -84,8 +86,9 @@ const NAV: NavItem[] = [
   { href: "/freeclaude",  label: "Free Claude Code", icon: <AgentAvatar agent="fcc" size={22} />,    accent: "#10b981", dim: "rgba(16,185,129,0.16)" },
   { href: "/jarvis",      label: "Jarvis",      icon: <AgentAvatar agent="hermes" size={22} />,    accent: "#60a5fa", dim: "rgba(96,165,250,0.16)" },
 
-  // Studios (existing)
+  // Studios
   { href: "/rig-linkedin", label: "LinkedIn Studio", icon: <Briefcase size={16} />,  accent: "#0a66c2", dim: "rgba(10,102,194,0.16)" },
+  { href: "/rig-instagram", label: "Instagram Studio", icon: <Camera size={16} />, accent: "#E1306C", dim: "rgba(225,48,108,0.16)" },
   { href: "/rig-gtm",      label: "GTM Studio",      icon: <Rocket size={16} />,    accent: "#10b981", dim: "rgba(16,185,129,0.16)" },
   { href: "/rig-design",   label: "Design Studio",   icon: <Wand2 size={16} />,     accent: "#ec4899", dim: "rgba(236,72,153,0.16)" },
   { href: "/rig-strategy", label: "Strategy Studio", icon: <TrendingUp size={16} />, accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
@@ -137,6 +140,7 @@ const SECTION_MAP: Record<string, string> = {
   "/agency/portals": "Agency",
   "/agency/agents": "Agency",
   "/agency/fleet": "Agency",
+  "/agency/harbor": "Agency",
   "/agency/spend": "Agency",
   "/rig-doctrine": "RIG Doctrine",
   "/rig-fleet": "RIG Doctrine",
@@ -156,6 +160,7 @@ const SECTION_MAP: Record<string, string> = {
   "/freeclaude": "Agents",
   "/jarvis": "Agents",
   "/rig-linkedin": "Studios",
+  "/rig-instagram": "Studios",
   "/rig-gtm": "Studios",
   "/agency/health": "Agency",
   "/agency/capabilities": "Agency",

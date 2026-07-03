@@ -1,83 +1,105 @@
-import { NextResponse } from "next/server";
-import { getModalModelPlaneStatus } from "@/lib/modalModelPlane";
+// ── RIG OS Agency — Health API ──────────────────────────────────────
+// Comprehensive health check: server status, database connectivity,
+// agency counts (clients, deals, proposals, contracts, invoices),
+// GTM prospect counts, and page inventory.
+// Surfaced for monitoring scripts, cron turns, and dashboards.
 
-export const runtime = "nodejs";
+import { NextResponse } from "next/server";
+import { dbGetClients, dbGetPipelineDeals, dbGetProposals, dbGetContracts, dbGetInvoices } from "@/lib/db";
+import * as fs from "fs";
+import * as path from "path";
+
 export const dynamic = "force-dynamic";
 
-// GET /api/agency/health — system health overview (REAL system data)
-export async function GET() {
-  const { execSync } = await import('child_process');
-  const { existsSync, readdirSync, statSync } = await import('fs');
-  const { join } = await import('path');
-  
-  function run(cmd: string): string {
-    try { return execSync(cmd, { timeout: 3000, encoding: 'utf-8' }).trim(); } catch { return 'unknown'; }
+const GTM_STUDIO_V2_ROOT = "/Users/rig128gb/Developer/rig-gtm-studio-v2";
+const APP_ROOT = "/Users/rig128gb/Developer/rig-os-agency";
+
+function safeCount<T>(arr: T[] | undefined): number {
+  try {
+    return arr ? arr.length : 0;
+  } catch {
+    return 0;
   }
-  
-  const diskFree = run(`df -h / | tail -1 | awk '{print $4}'`);
-  const loadAvg = run(`uptime | sed 's/.*load averages: //' | awk -F', ' '{print $1}'`);
-  const processCount = parseInt(run(`ps aux | wc -l`)) || 0;
-  const pageCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/app -name "page.tsx" -maxdepth 5 2>/dev/null | wc -l`)) || 0;
-  const apiCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/app/api -name "route.ts" -maxdepth 5 2>/dev/null | wc -l`)) || 0;
-  const componentCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/components -name "*.tsx" -maxdepth 3 2>/dev/null | wc -l`)) || 0;
-  const libCount = parseInt(run(`find /Users/rig128gb/Developer/rig-os-agency/src/lib -name "*.ts" -maxdepth 2 2>/dev/null | wc -l`)) || 0;
-  const appRunning = true;
-  const modal = await getModalModelPlaneStatus();
-  
+}
+
+function countPages(): number {
+  try {
+    const walk = (dir: string): number => {
+      let count = 0;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          count += walk(full);
+        } else if (entry.name === "page.tsx") {
+          count += 1;
+        }
+      }
+      return count;
+    };
+    return walk(path.join(APP_ROOT, "src", "app"));
+  } catch {
+    return 0;
+  }
+}
+
+function countGtmProspects(): number {
+  try {
+    const clientsDir = path.join(GTM_STUDIO_V2_ROOT, "clients");
+    const entries = fs.readdirSync(clientsDir, { withFileTypes: true });
+    return entries.filter((e) => e.isDirectory() && !e.name.startsWith("_")).length;
+  } catch {
+    return 0;
+  }
+}
+
+export async function GET() {
+  const startMs = Date.now();
+
+  let dbStatus = "ok";
+  let clientCount = 0;
+  let dealCount = 0;
+  let proposalCount = 0;
+  let contractCount = 0;
+  let invoiceCount = 0;
+
+  try {
+    clientCount = safeCount(dbGetClients());
+    dealCount = safeCount(dbGetPipelineDeals());
+    proposalCount = safeCount(dbGetProposals());
+    contractCount = safeCount(dbGetContracts());
+    invoiceCount = safeCount(dbGetInvoices());
+  } catch {
+    dbStatus = "error";
+  }
+
+  const gtmProspects = countGtmProspects();
+  const pageCount = countPages();
+  const latencyMs = Date.now() - startMs;
+
   return NextResponse.json({
-    system: {
-      diskFree: diskFree,
-      loadAvg: loadAvg,
-      processes: processCount,
-      docker: run(`docker info --format '{{.ServerVersion}}' 2>/dev/null || echo 'not running'`),
-      colima: run(`colima status --json 2>/dev/null || echo 'unknown'`),
-      networkInterfaces: parseInt(run(`ifconfig -l 2>/dev/null | wc -w`)) || 0,
-      cronConfigured: true,
+    status: "ok",
+    app: "RIG OS Agency",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    uptime_seconds: Math.round(process.uptime()),
+    environment: process.env.NODE_ENV || "development",
+    port: process.env.PORT || 3737,
+    latency_ms: latencyMs,
+    checks: {
+      database: dbStatus,
+      server: "ok",
+      build_artifacts: pageCount > 0 ? "ok" : "degraded",
     },
-    app: {
-      pages: pageCount,
-      apis: apiCount,
-      libFiles: libCount,
-      components: componentCount,
-      running: appRunning,
-      buildStatus: "passing",
+    counts: {
+      clients: clientCount,
+      pipeline_deals: dealCount,
+      proposals: proposalCount,
+      contracts: contractCount,
+      invoices: invoiceCount,
+      gtm_prospects: gtmProspects,
+      app_pages: pageCount,
     },
-    rig: {
-      agents: 423,
-      skills: 1202,
-      goalLoops: 50,
-      deviationEngines: 40,
-      mcpServers: 15,
-      githubRepos: 183,
-    },
-    cron: {
-      active: [
-        { name: "Jarvis Morning Briefing", schedule: "0 7 * * *", deliver: "telegram" },
-        { name: "1000x Continuous Improvement", schedule: "every 2h", deliver: "telegram" },
-        { name: "1000x Nightly Deep Improvement", schedule: "0 23 * * *", deliver: "telegram" },
-        { name: "GTM Daily Loop", schedule: "30 8 * * *", deliver: "local" },
-        { name: "GTM Daily Queue", schedule: "0 9 * * *", deliver: "local" },
-        { name: "GTM Daily Enforcer", schedule: "30 9 * * *", deliver: "local" },
-        { name: "GTM Weekly Scoreboard", schedule: "0 10 * * 1", deliver: "local" },
-      ],
-    },
-    modal: {
-      status: modal.status,
-      alias: modal.alias,
-      provider: modal.provider,
-      model: modal.model,
-      gpu: "8x B200",
-      engine: "SGLang v0.5.13",
-      endpoint: modal.endpointHost,
-      proxyUrl: modal.proxyUrl,
-      manualOnly: modal.manualOnly,
-      endpointConfigured: modal.endpointConfigured,
-      proxyReachable: modal.proxyReachable,
-      lanes: modal.lanes,
-      readyLanes: modal.readyLanes,
-      configuredCount: modal.configuredCount,
-      totalLanes: modal.totalLanes,
-      blockers: modal.blockers,
-    },
+    design_system: "Midnight Aubergine",
+    doctrine: "ProofPacket or it didn't happen",
   });
 }

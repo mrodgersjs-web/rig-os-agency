@@ -1,0 +1,40 @@
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+
+Import trace:
+  App Route:
+    ./next.config.ts
+    ./src/app/api/video/preview/[...path]/route.ts
+
+
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./src/app/agency/email-tracking/page.tsx:35:61
+Expected a semicolon
+  [90m33 |[0m ....div key={c.label} {...fadeUp} transition={{ y: [35m0[0m }} whileHover={{ scale:[35m1.04[0m }} classN...
+  [90m34 |[0m ...style={{ background:[32m`[0m${c.color[32m}16`[0m, color:c.color, padding:[32m"8px"[0m, borderRadious:[32m"12px"[0m}...
+[31m[1m>[0m [90m35 |[0m ...<div style={{ fontSize: [32m"var(--text-lg)"[0m>{c.value}<[35m/div><p className="opacity-50 text-[...[0m
+  [90m   |[0m                                               [31m[1m^[0m
+  [90m36 |[0m ...n.div>
+  [90m37 |[0m ...
+  [90m38 |[0m ...
+
+Parsing ecmascript source code failed
+
+Import trace:
+  App Route:
+    ./src/app/agency/email-tracking/page.tsx
+    ./src/app/api/video/preview/[...path]/route.ts
+
+
+    at <unknown> (./src/app/agency/email-tracking/page.tsx:35:61)

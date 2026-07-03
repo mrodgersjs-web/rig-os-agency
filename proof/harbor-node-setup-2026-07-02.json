@@ -1,0 +1,165 @@
+{
+  "proof_packet": "harbor-node-setup-2026-07-02",
+  "timestamp_utc": "2026-07-02T23:39:35Z",
+  "signer": "codex",
+  "scope": {
+    "request": "Install, clone, and run Harbor to optimize the local RIG node setup; add Harbor as an Agency app tab.",
+    "local_only": true,
+    "public_action": false,
+    "remote_push": false,
+    "credential_change": false
+  },
+  "sources": [
+    {
+      "name": "Harbor GitHub repository",
+      "url": "https://github.com/av/harbor"
+    },
+    {
+      "name": "Harbor upstream install prompt",
+      "url": "https://raw.githubusercontent.com/av/harbor/main/install.md"
+    }
+  ],
+  "harbor": {
+    "installer": "curl -fsSL https://raw.githubusercontent.com/av/harbor/refs/heads/main/install.sh | bash",
+    "cli_path": "/Users/rig128gb/.local/bin/harbor",
+    "cli_version": "Harbor CLI version: 0.5.2",
+    "install_path": "/Users/rig128gb/.harbor",
+    "install_commit": "8c6b3ec087cb0db069d3f503d5c01d51c572c49e",
+    "source_clone_path": "/Users/rig128gb/Developer/harbor",
+    "source_clone_commit": "9d310f2fe44a81ea0cd15c33bd1756484310719b",
+    "run_command": "/Users/rig128gb/.local/bin/harbor up searxng metamcp mcpo",
+    "profile": {
+      "base_services": [
+        "webui",
+        "ollama",
+        "llamacpp"
+      ],
+      "added_services": [
+        "searxng",
+        "metamcp",
+        "mcpo"
+      ]
+    },
+    "local_repairs": [
+      {
+        "component": "searxng",
+        "action": "Replaced Harbor v0.5.2 bundled SearXNG settings with a current-image-compatible local settings.yml and preserved the original as settings.yml.harbor-v0.5.2.bak.",
+        "settings_sha256": "c4809b12a0970a04ad96a70904ae2eadf40b8e2b80129f227262fc7cca8e8d03",
+        "backup_sha256": "b9238250ff0d07400b1dd7583060b347f18c89e4f871e1070a3728e794337476"
+      },
+      {
+        "component": "metamcp-sse",
+        "action": "Bootstrapped a local RIG Node project/API key row inside the MetaMCP Postgres container so the SSE transport can start.",
+        "secret_handling": "Generated key was not printed, committed, exported, or written to this proof packet."
+      }
+    ]
+  },
+  "agency_app": {
+    "repo": "/Users/rig128gb/Developer/rig-os-agency",
+    "routes": [
+      "/agency/harbor",
+      "/api/agency/harbor"
+    ],
+    "files": [
+      {
+        "path": "src/components/Sidebar.tsx",
+        "sha256": "48aeb3f2826b83e6d6667cc4b59c293456d4e8733c89aee7abd1da87751f2c76",
+        "change": "Added Harbor Node item to the Agency sidebar."
+      },
+      {
+        "path": "src/app/api/agency/harbor/route.ts",
+        "sha256": "8e5e40ce8729213d164d0ebf64e241f9b7dd2f55ca05651b52dc767213623d6a",
+        "change": "Added local-only Harbor status API with safe fixed commands, endpoint probes, and redaction."
+      },
+      {
+        "path": "src/app/agency/harbor/page.tsx",
+        "sha256": "2d05e0ffec05ac9363c1f0ab481ed2217473e414326537c14460da1327637f2e",
+        "change": "Added Harbor Node dashboard tab with CLI, doctor, service, endpoint, install, and profile status; keeps MetaMCP SSE status-only instead of browser-clickable."
+      }
+    ]
+  },
+  "verification": [
+    {
+      "command": "/Users/rig128gb/.local/bin/harbor --version",
+      "result": "Harbor CLI version: 0.5.2"
+    },
+    {
+      "command": "/Users/rig128gb/.local/bin/harbor doctor --check",
+      "result": "PASS: essential checks passed"
+    },
+    {
+      "command": "docker ps --filter 'name=harbor.'",
+      "result": "9 Harbor containers running; MetaMCP migration container completed with exit 0."
+    },
+    {
+      "command": "curl -fsS http://127.0.0.1:3738/api/agency/harbor | jq '{overall, exposure, cliInstalled: .cli.installed, doctorOk: .cli.doctorOk, counts: .counts, endpoints: [.endpoints[] | {id, status, httpStatus}]}'",
+      "result": {
+        "overall": "ready",
+        "exposure": "local-only",
+        "cliInstalled": true,
+        "doctorOk": true,
+        "counts": {
+          "runningServices": 9,
+          "totalServices": 10,
+          "onlineEndpoints": 7,
+          "totalEndpoints": 7
+        },
+        "endpoints": [
+          {
+            "id": "webui",
+            "status": "online",
+            "httpStatus": 200
+          },
+          {
+            "id": "ollama",
+            "status": "online",
+            "httpStatus": 200
+          },
+          {
+            "id": "llamacpp",
+            "status": "online",
+            "httpStatus": 200
+          },
+          {
+            "id": "searxng",
+            "status": "online",
+            "httpStatus": 200
+          },
+          {
+            "id": "metamcp",
+            "status": "online",
+            "httpStatus": 307
+          },
+          {
+            "id": "mcpo",
+            "status": "online",
+            "httpStatus": 200
+          },
+          {
+            "id": "metamcp-sse",
+            "status": "online",
+            "httpStatus": null
+          }
+        ]
+      }
+    },
+    {
+      "command": "curl -fsS -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:3738/agency/harbor",
+      "result": "200"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS: Next build compiled successfully and included /agency/harbor plus /api/agency/harbor."
+    }
+  ],
+  "residuals": [
+    "Plain harbor doctor still has an extended Colima Docker-root-path diagnostic warning, but harbor doctor --check passes the essential gate.",
+    "Next build emits a pre-existing Turbopack NFT warning from src/app/api/video/preview/[...path]/route.ts; the Harbor route builds successfully.",
+    "Playwright screenshot verification was not run because neither playwright nor @playwright/test is installed in node_modules."
+  ],
+  "redactions": [
+    "MetaMCP local API key value omitted.",
+    "SearXNG generated secret value omitted.",
+    "No secret-bearing Harbor config dump was captured."
+  ]
+}

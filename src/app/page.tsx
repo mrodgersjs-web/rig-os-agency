@@ -6,6 +6,7 @@ import {
   Building2, Users, DollarSign, Shield, Boxes, Target, Server,
   Command, Layers, Activity, Zap, TrendingUp, Rocket, Briefcase,
   ArrowUpRight, Cpu, GitBranch, Gauge, TrendingDown, BarChart3,
+  CreditCard,
 } from "lucide-react";
 import LiveCommandBar from "@/components/LiveCommandBar";
 import BriefingCard from "@/components/BriefingCard";
@@ -96,6 +97,7 @@ export default function CommandCenter() {
             { href: "/agency/contracts", title: "Contracts & Invoices", desc: "Manage engagements, billing, and renewals.", icon: <Shield size={18} />, accent: "#c4607e" },
             { href: "/agency/spend", title: "Spend Reduction", desc: "Service costs, optimization opportunities, $8.7K annual savings.", icon: <TrendingDown size={18} />, accent: "#5ab896" },
             { href: "/agency/ads", title: "Ads Performance", desc: "8 campaigns, 3 platforms, 8.6x blended ROAS, creative breakdowns.", icon: <BarChart3 size={18} />, accent: "#22d3ee" },
+            { href: "/stripe", title: "Stripe Revenue", desc: "Live MRR, ARR, customers, and recent charges from Stripe. Zero if not connected.", icon: <CreditCard size={18} />, accent: "#d4a574" },
           ].map((card) => (
             <Link key={card.href} href={card.href} className="block group">
               <div
