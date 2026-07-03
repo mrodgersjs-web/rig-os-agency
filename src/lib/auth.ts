@@ -1,4 +1,4 @@
-import db from "./db";
+import db from "./rig-db";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 
