@@ -1,100 +1,83 @@
 import { NextResponse } from "next/server";
-import { getSession, getTasks, updateTask, createTask, type Task } from "@/lib/auth";
-import { rateLimit } from "@/lib/rate-limit";
+import { promises as fs } from "fs";
+import path from "path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/paperclip/tasks — list tasks for user's workspace
-export async function GET(req: Request) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  const session = token ? getSession(token) : null;
+const JSON_FILE = path.join(process.env.HOME || "/Users/rig128gb", "Developer/rig-os-agency/data/paperclip-tasks.json");
 
-  // Determine workspace — default to Mike's workspace for local mode
-  let wsId = "default";
-  if (session?.workspace_id) {
-    wsId = session.workspace_id;
-  } else {
-    // Local mode — find or create default workspace
-    const db = (await import("@/lib/db")).default;
-    let ws = db.prepare("SELECT id FROM workspaces WHERE owner_id = (SELECT id FROM users WHERE email = 'mike@rig.local')").get() as { id: string } | undefined;
-    if (!ws) {
-      // Seed default data
-      ws = db.prepare("SELECT id FROM workspaces ORDER BY created_at LIMIT 1").get() as { id: string } | undefined;
-    }
-    wsId = ws?.id || "seed";
+// GET tasks — uses JSON file (reliable, no native module issues)
+export async function GET() {
+  try {
+    const raw = await fs.readFile(JSON_FILE, "utf-8");
+    const data = JSON.parse(raw);
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ inbox: [], today: [], activity: [] });
   }
-
-  const url = new URL(req.url);
-  const section = url.searchParams.get("section");
-
-  const tasks = getTasks(wsId, section || undefined);
-
-  // Group by section
-  const grouped = {
-    inbox: tasks.filter(t => t.section === "inbox"),
-    today: tasks.filter(t => t.section === "today"),
-    activity: [], // From agent_activity table
-  };
-
-  return NextResponse.json(grouped);
 }
 
-// PATCH /api/paperclip/tasks — update a task
+// PATCH — update a task
 export async function PATCH(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") || "local";
-  const rl = rateLimit(`tasks:${ip}`, 100);
-  if (!rl.allowed) {
-    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+  try {
+    const body = await req.json();
+    const { id, section, updates } = body;
+
+    const raw = await fs.readFile(JSON_FILE, "utf-8");
+    const data = JSON.parse(raw);
+    const list = data[section] || data.today || [];
+    const idx = list.findIndex((item: { id: string }) => item.id === id);
+
+    if (idx === -1) {
+      // Try all sections
+      for (const sec of ["inbox", "today"]) {
+        const sIdx = (data[sec] || []).findIndex((item: { id: string }) => item.id === id);
+        if (sIdx !== -1) {
+          data[sec][sIdx] = { ...data[sec][sIdx], ...updates };
+          await fs.writeFile(JSON_FILE, JSON.stringify(data, null, 2));
+          return NextResponse.json({ ok: true, item: data[sec][sIdx] });
+        }
+      }
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+
+    list[idx] = { ...list[idx], ...updates };
+    data[section] = list;
+    await fs.writeFile(JSON_FILE, JSON.stringify(data, null, 2));
+
+    return NextResponse.json({ ok: true, item: list[idx] });
+  } catch {
+    return NextResponse.json({ error: "update failed" }, { status: 500 });
   }
-
-  const body = await req.json();
-  const { id, updates } = body;
-
-  if (!id || !updates) {
-    return NextResponse.json({ error: "missing id or updates" }, { status: 400 });
-  }
-
-  const updated = updateTask(id, updates);
-  if (!updated) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ ok: true, item: updated });
 }
 
-// POST /api/paperclip/tasks — create a task
+// POST — create a task
 export async function POST(req: Request) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  const session = token ? getSession(token) : null;
+  try {
+    const body = await req.json();
+    const raw = await fs.readFile(JSON_FILE, "utf-8");
+    const data = JSON.parse(raw);
 
-  const body = await req.json();
-  
-  let wsId = session?.workspace_id || "default";
-  if (wsId === "default") {
-    const db = (await import("@/lib/db")).default;
-    const ws = db.prepare("SELECT id FROM workspaces ORDER BY created_at LIMIT 1").get() as { id: string } | undefined;
-    wsId = ws?.id || "default";
+    const newTask = {
+      id: `t-${Date.now()}`,
+      title: body.title || "Untitled",
+      description: body.description || "",
+      priority: body.priority || "medium",
+      status: body.status || "pending",
+      assignee: body.assignee || null,
+      due_date: body.due || null,
+      tags: JSON.stringify(body.tags || []),
+      section: body.section || "today",
+    };
+
+    const section = newTask.section;
+    if (!data[section]) data[section] = [];
+    data[section].push(newTask);
+
+    await fs.writeFile(JSON_FILE, JSON.stringify(data, null, 2));
+    return NextResponse.json({ ok: true, item: newTask });
+  } catch {
+    return NextResponse.json({ error: "create failed" }, { status: 500 });
   }
-
-  const task = createTask(wsId, {
-    title: body.title,
-    description: body.description,
-    priority: body.priority,
-    status: body.status,
-    assignee: body.assignee,
-    section: body.section || "today",
-    tags: body.tags ? JSON.stringify(body.tags) : "[]",
-  });
-
-  return NextResponse.json({ ok: true, item: task });
-}
-
-// DELETE /api/paperclip/tasks — delete a task
-export async function DELETE(req: Request) {
-  const { id } = await req.json();
-  if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
-
-  (await import("@/lib/auth")).deleteTask(id);
-  return NextResponse.json({ ok: true });
 }

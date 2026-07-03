@@ -1,33 +1,53 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Sidebar, { MobileNav } from "./Sidebar";
 import TopBar from "./TopBar";
-import { CopilotDrawer, CopilotButton } from "./CopilotDrawer";
-import { TerminalPanel, TerminalButton } from "./TerminalPanel";
+import { CopilotDrawer } from "./CopilotDrawer";
+import { TerminalPanel } from "./TerminalPanel";
+import { DetailProvider } from "./DetailContext";
 
 export default function Shell({ children }: { children: ReactNode }) {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
 
+  useEffect(() => {
+    const onOpenCopilot = () => setCopilotOpen(true);
+    const onRunTerminal = () => setTerminalOpen(true);
+    window.addEventListener("open-copilot", onOpenCopilot);
+    window.addEventListener("run-terminal", onRunTerminal);
+    return () => {
+      window.removeEventListener("open-copilot", onOpenCopilot);
+      window.removeEventListener("run-terminal", onRunTerminal);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <main className="flex-1 min-w-0">
-        <div className="max-w-[1500px] mx-auto px-6 md:px-10 py-8 pb-20">
-          <TopBar />
-          {children}
+    <DetailProvider>
+      <div className="h-screen flex overflow-hidden" style={{ background: "var(--rig-bg)" }}>
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TopBar
+            onOpenCopilot={() => setCopilotOpen(true)}
+            onToggleTerminal={() => setTerminalOpen(s => !s)}
+            terminalOpen={terminalOpen}
+          />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
         </div>
-      </main>
-      <MobileNav />
+        <MobileNav />
 
-      {/* Global Copilot Drawer */}
-      <CopilotButton onClick={() => setCopilotOpen(true)} personaId="ornith" />
-      <CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} personaId="ornith" />
-
-      {/* Global Terminal */}
-      <TerminalButton onClick={() => setTerminalOpen((s) => !s)} />
-      <TerminalPanel open={terminalOpen} onClose={() => setTerminalOpen(false)} />
-    </div>
+        <CopilotDrawer
+          open={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          personaId="jake"
+        />
+        <TerminalPanel
+          open={terminalOpen}
+          onClose={() => setTerminalOpen(false)}
+        />
+      </div>
+    </DetailProvider>
   );
 }

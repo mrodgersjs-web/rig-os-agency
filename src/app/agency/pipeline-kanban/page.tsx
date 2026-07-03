@@ -1,66 +1,131 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Workflow, DollarSign, Users, TrendingUp } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Workflow, DollarSign, Users, TrendingUp, Plus, X, ChevronRight, ChevronLeft, Trash2, Target } from "lucide-react";
 
 const STAGES = ["discovery", "qualified", "proposal", "negotiation", "closed"] as const;
-type Stage = typeof STAGES[number];
+type Stage = (typeof STAGES)[number];
 
-const STAGE_META: Record<Stage, { label: string; color: string }> = {
-  discovery: { label: "Discovery", color: "#60a5fa" },
-  qualified: { label: "Qualified", color: "#a78bfa" },
-  proposal: { label: "Proposal", color: "#fbbf24" },
-  negotiation: { label: "Negotiation", color: "#fb923c" },
-  closed: { label: "Closed", color: "#22c55e" },
+const STAGE_META: Record<Stage, { label: string; color: string; weight: number }> = {
+  discovery: { label: "Discovery", color: "#60a5fa", weight: 0.1 },
+  qualified: { label: "Qualified", color: "#a78bfa", weight: 0.25 },
+  proposal: { label: "Proposal", color: "#fbbf24", weight: 0.5 },
+  negotiation: { label: "Negotiation", color: "#fb923c", weight: 0.75 },
+  closed: { label: "Closed Won", color: "#22c55e", weight: 1.0 },
 };
 
 interface Deal {
   id: string;
-  company: string;
+  clientName: string;
   contact: string;
-  value: number;
+  dealValue: number;
   stage: Stage;
+  source: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const SEED_DEALS: Deal[] = [
-  { id: "1", company: "TechFlow Inc", contact: "Sarah Chen", value: 48000, stage: "discovery" },
-  { id: "2", company: "DataMeld", contact: "James Park", value: 120000, stage: "qualified" },
-  { id: "3", company: "NeuralSoft", contact: "Dr. Lisa Zhao", value: 85000, stage: "proposal" },
-  { id: "4", company: "CloudVista", contact: "Mark Reeves", value: 220000, stage: "negotiation" },
-  { id: "5", company: "AIPartner Co", contact: "Tom Bridges", value: 95000, stage: "closed" },
-  { id: "6", company: "ScaleUp Labs", contact: "Nina Patel", value: 67000, stage: "discovery" },
-  { id: "7", company: "DeepTech AI", contact: "Chris Wong", value: 180000, stage: "qualified" },
-  { id: "8", company: "BioMetric Systems", contact: "Amy Liu", value: 75000, stage: "proposal" },
-];
+interface Summary {
+  count: number;
+  totalValue: number;
+  closedValue: number;
+  weightedValue: number;
+}
 
 export default function PipelineKanbanPage() {
-  const [deals] = useState(SEED_DEALS);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [summary, setSummary] = useState<Summary>({ count: 0, totalValue: 0, closedValue: 0, weightedValue: 0 });
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/agency/pipeline-deals?action=list");
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      setDeals(data.deals || []);
+      setSummary({ count: data.count, totalValue: data.totalValue, closedValue: data.closedValue, weightedValue: data.weightedValue });
+    } catch {
+      // fallback
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const moveStage = async (deal: Deal, dir: 1 | -1) => {
+    const idx = STAGES.indexOf(deal.stage);
+    const next = STAGES[Math.min(STAGES.length - 1, Math.max(0, idx + dir))];
+    if (next === deal.stage) return;
+    setDeals((prev) => prev.map((d) => (d.id === deal.id ? { ...d, stage: next } : d)));
+    await fetch("/api/agency/pipeline-deals", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "move", id: deal.id, stage: next }),
+    });
+  };
+
+  const deleteDeal = async (id: string) => {
+    setDeals((prev) => prev.filter((d) => d.id !== id));
+    setSelectedDeal(null);
+    await fetch("/api/agency/pipeline-deals", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id }),
+    });
+  };
+
+  const addDeal = async (deal: Partial<Deal>) => {
+    const res = await fetch("/api/agency/pipeline-deals", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(deal),
+    });
+    if (res.ok) { setShowAdd(false); loadData(); }
+  };
 
   const grouped = STAGES.reduce((acc, stage) => {
     acc[stage] = deals.filter((d) => d.stage === stage);
     return acc;
   }, {} as Record<Stage, Deal[]>);
 
-  const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-[14px]" style={{ color: "var(--cream-mute)" }}>Loading pipeline…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: "var(--cream)" }}>
-          Pipeline Kanban
-        </h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--cream-mute)" }}>
-          {deals.length} deals · ${(totalValue / 1000).toFixed(0)}K total pipeline value
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: "var(--cream)" }}>
+            Pipeline Kanban
+          </h1>
+          <p className="text-[13px] mt-1" style={{ color: "var(--cream-mute)" }}>
+            {summary.count} deals · ${(summary.totalValue / 1000).toFixed(0)}K open · ${(summary.closedValue / 1000).toFixed(0)}K closed
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all hover:opacity-90"
+          style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+        >
+          <Plus size={15} /> New Deal
+        </button>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Deals", value: deals.length.toString(), icon: Workflow, color: "#60a5fa" },
-          { label: "Pipeline Value", value: `$${(totalValue / 1000).toFixed(0)}K`, icon: DollarSign, color: "#d4a574" },
-          { label: "Avg Deal Size", value: `$${(totalValue / deals.length / 1000).toFixed(0)}K`, icon: TrendingUp, color: "#22c55e" },
-          { label: "Win Rate", value: "32%", icon: Users, color: "#fbbf24" },
+          { label: "Open Pipeline", value: `$${(summary.totalValue / 1000).toFixed(0)}K`, icon: DollarSign, color: "#60a5fa" },
+          { label: "Weighted Forecast", value: `$${(summary.weightedValue / 1000).toFixed(0)}K`, icon: Target, color: "#d4a574" },
+          { label: "Closed Won", value: `$${(summary.closedValue / 1000).toFixed(0)}K`, icon: TrendingUp, color: "#22c55e" },
+          { label: "Active Deals", value: deals.filter((d) => d.stage !== "closed").length.toString(), icon: Workflow, color: "#fbbf24" },
         ].map((s, i) => (
           <motion.div
             key={s.label}
@@ -71,74 +136,268 @@ export default function PipelineKanbanPage() {
           >
             <div className="flex items-center gap-2 mb-1.5">
               <s.icon size={14} style={{ color: s.color }} />
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--cream-mute)" }}>
-                {s.label}
-              </span>
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: "var(--cream-mute)" }}>{s.label}</span>
             </div>
             <div className="text-xl font-bold" style={{ color: "var(--cream)" }}>{s.value}</div>
           </motion.div>
         ))}
       </div>
 
+      {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {STAGES.map((stage) => {
           const stageDeals = grouped[stage];
           const meta = STAGE_META[stage];
-          const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
+          const stageValue = stageDeals.reduce((s, d) => s + d.dealValue, 0);
 
           return (
             <div
               key={stage}
-              className="flex-shrink-0 w-[280px] rounded-xl p-3"
+              className="flex-shrink-0 w-[290px] rounded-xl p-3"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--line-soft)" }}
             >
+              {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: meta.color }} />
-                  <span className="text-[12px] font-semibold" style={{ color: "var(--cream)" }}>
-                    {meta.label}
-                  </span>
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--cream)" }}>{meta.label}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: `${meta.color}20`, color: meta.color }}>
                     {stageDeals.length}
                   </span>
                 </div>
-                <span className="text-[10px]" style={{ color: "var(--cream-mute)" }}>
-                  ${(stageValue / 1000).toFixed(0)}K
-                </span>
+                <span className="text-[10px]" style={{ color: "var(--cream-mute)" }}>${(stageValue / 1000).toFixed(0)}K</span>
               </div>
 
+              {/* Deal cards */}
               <div className="space-y-2">
-                {stageDeals.map((deal) => (
-                  <motion.div
-                    key={deal.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="p-3 rounded-lg cursor-pointer"
-                    style={{ background: "var(--bg-card)", border: "1px solid var(--line-soft)" }}
-                  >
-                    <div className="text-[12px] font-semibold mb-1" style={{ color: "var(--cream)" }}>
-                      {deal.company}
-                    </div>
-                    <div className="text-[10px] mb-2" style={{ color: "var(--cream-mute)" }}>
-                      {deal.contact}
-                    </div>
-                    <div className="text-[14px] font-bold" style={{ color: meta.color }}>
-                      ${(deal.value / 1000).toFixed(0)}K
-                    </div>
-                  </motion.div>
-                ))}
+                <AnimatePresence>
+                  {stageDeals.map((deal) => (
+                    <motion.div
+                      key={deal.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="p-3 rounded-lg cursor-pointer group"
+                      style={{ background: "var(--bg-card)", border: "1px solid var(--line-soft)" }}
+                      onClick={() => setSelectedDeal(deal)}
+                    >
+                      <div className="text-[12px] font-semibold mb-1" style={{ color: "var(--cream)" }}>{deal.clientName}</div>
+                      {deal.contact && (
+                        <div className="text-[10px] mb-1.5" style={{ color: "var(--cream-mute)" }}>{deal.contact}</div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="text-[14px] font-bold" style={{ color: meta.color }}>${(deal.dealValue / 1000).toFixed(0)}K</div>
+                        {deal.source && (
+                          <div className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--line-soft)", color: "var(--cream-mute)" }}>
+                            {deal.source}
+                          </div>
+                        )}
+                      </div>
+                      {/* Move buttons */}
+                      <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveStage(deal, -1); }}
+                          disabled={STAGES.indexOf(deal.stage) === 0}
+                          className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
+                          style={{ color: "var(--cream-mute)" }}
+                        >
+                          <ChevronLeft size={13} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveStage(deal, 1); }}
+                          disabled={STAGES.indexOf(deal.stage) === STAGES.length - 1}
+                          className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
+                          style={{ color: "var(--cream-mute)" }}
+                        >
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
 
                 {stageDeals.length === 0 && (
-                  <div className="text-center py-8 text-[11px]" style={{ color: "var(--cream-mute)" }}>
-                    No deals
-                  </div>
+                  <div className="text-center py-8 text-[11px]" style={{ color: "var(--cream-mute)" }}>No deals</div>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Add Deal Modal */}
+      <AnimatePresence>
+        {showAdd && <AddDealModal onClose={() => setShowAdd(false)} onAdd={addDeal} />}
+      </AnimatePresence>
+
+      {/* Deal Detail Modal */}
+      <AnimatePresence>
+        {selectedDeal && (
+          <DealDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} onDelete={deleteDeal} onMove={moveStage} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Add Deal Modal ──────────────────────────────────────────────────────────
+function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Partial<Deal>) => void }) {
+  const [form, setForm] = useState({ clientName: "", contact: "", dealValue: "", stage: "discovery", source: "Manual Entry", notes: "" });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
+        className="w-full max-w-md rounded-2xl p-6"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--line)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--cream)" }}>New Deal</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/5"><X size={18} style={{ color: "var(--cream-mute)" }} /></button>
+        </div>
+        <div className="space-y-3">
+          <Field label="Company / Client">
+            <input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+              className="w-full bg-transparent text-[13px] outline-none" style={{ color: "var(--cream)" }} placeholder="Acme Corp" autoFocus />
+          </Field>
+          <Field label="Contact (optional)">
+            <input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })}
+              className="w-full bg-transparent text-[13px] outline-none" style={{ color: "var(--cream)" }} placeholder="Jane Doe" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Deal Value ($)">
+              <input type="number" value={form.dealValue} onChange={(e) => setForm({ ...form, dealValue: e.target.value })}
+                className="w-full bg-transparent text-[13px] outline-none" style={{ color: "var(--cream)" }} placeholder="50000" />
+            </Field>
+            <Field label="Stage">
+              <select value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })}
+                className="w-full bg-transparent text-[13px] outline-none" style={{ color: "var(--cream)" }}>
+                {STAGES.map((s) => <option key={s} value={s} style={{ background: "var(--bg-deep)" }}>{STAGE_META[s].label}</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="Source">
+            <select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}
+              className="w-full bg-transparent text-[13px] outline-none" style={{ color: "var(--cream)" }}>
+              {["Manual Entry", "LinkedIn Outreach", "Cold Email", "Referral", "Inbound", "Conference", "Partner Referral"].map((s) => (
+                <option key={s} value={s} style={{ background: "var(--bg-deep)" }}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Notes (optional)">
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="w-full bg-transparent text-[13px] outline-none resize-none" rows={2} style={{ color: "var(--cream)" }} placeholder="Project scope, key context…" />
+          </Field>
+        </div>
+        <button
+          onClick={() => onAdd({ ...form, dealValue: Number(form.dealValue) || 0 })}
+          disabled={!form.clientName.trim()}
+          className="w-full mt-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-30"
+          style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+        >
+          Create Deal
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Deal Detail Modal ───────────────────────────────────────────────────────
+function DealDetailModal({ deal, onClose, onDelete, onMove }: {
+  deal: Deal; onClose: () => void; onDelete: (id: string) => void; onMove: (d: Deal, dir: 1 | -1) => void;
+}) {
+  const meta = STAGE_META[deal.stage];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
+        className="w-full max-w-lg rounded-2xl p-6"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--line)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: meta.color }} />
+              <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: meta.color }}>{meta.label}</span>
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: "var(--cream)" }}>{deal.clientName}</h2>
+            {deal.contact && <p className="text-[12px] mt-0.5" style={{ color: "var(--cream-mute)" }}>{deal.contact}</p>}
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/5"><X size={18} style={{ color: "var(--cream-mute)" }} /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <InfoBox label="Deal Value" value={`$${deal.dealValue.toLocaleString()}`} />
+          <InfoBox label="Weighted" value={`$${Math.round(deal.dealValue * meta.weight).toLocaleString()}`} />
+          <InfoBox label="Source" value={deal.source} />
+          <InfoBox label="Created" value={new Date(deal.createdAt).toLocaleDateString()} />
+        </div>
+
+        {deal.notes && (
+          <div className="mb-5 p-3 rounded-lg" style={{ background: "var(--line-soft)" }}>
+            <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--cream-mute)" }}>Notes</div>
+            <div className="text-[13px]" style={{ color: "var(--cream)" }}>{deal.notes}</div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--line-soft)" }}>
+          <button
+            onClick={() => onDelete(deal.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] transition-colors hover:bg-red-500/10"
+            style={{ color: "#ef4444" }}
+          >
+            <Trash2 size={13} /> Delete
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onMove(deal, -1)} disabled={STAGES.indexOf(deal.stage) === 0}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-30"
+              style={{ background: "var(--line-soft)", color: "var(--cream)" }}
+            >
+              <ChevronLeft size={14} /> Previous
+            </button>
+            <button
+              onClick={() => onMove(deal, 1)} disabled={STAGES.indexOf(deal.stage) === STAGES.length - 1}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-30"
+              style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Small UI helpers ────────────────────────────────────────────────────────
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--cream-mute)" }}>{label}</label>
+      <div className="px-3 py-2 rounded-lg" style={{ background: "var(--line-soft)" }}>{children}</div>
+    </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-3 rounded-lg" style={{ background: "var(--line-soft)" }}>
+      <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--cream-mute)" }}>{label}</div>
+      <div className="text-[14px] font-semibold" style={{ color: "var(--cream)" }}>{value}</div>
     </div>
   );
 }

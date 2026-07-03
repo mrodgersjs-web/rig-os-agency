@@ -2,258 +2,176 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import {
-  LayoutGrid, Brain, Target, BookOpen, Sparkles as SparklesIcon,
-  TrendingUp, Wand2, Columns3, NotebookText, Film, Network, Paperclip,
-  Workflow, Route, Shield, Activity, Briefcase, Rocket, Layers,
-  Building2, Users, DollarSign, Server, Cpu, GitBranch, Zap, Gauge,
-  Command, Boxes, FileText, Scale, Mail,
-  CreditCard, Wallet, Megaphone, Share2, Eye, Search, History,
-  Newspaper, DoorOpen, Bot, HardDrive, MailCheck, Radio, Anchor,
-  Camera, Terminal as TerminalIcon,
+  Search, ChevronDown, Plus,
+  LayoutGrid, Briefcase, Rocket, Wallet,
+  Users, TrendingUp, Code, Bot, Newspaper,
+  FileText, Mail, BarChart3, Brain, Shield,
+  Zap, BookOpen, Camera, Settings,
+  Terminal as TerminalIcon, MessageCircle,
+  type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import AgentAvatar from "./AgentAvatar";
+import { useState } from "react";
 
-interface NavItem {
-  href: string;
+interface NavGroup {
   label: string;
-  icon: ReactNode;
-  accent: string;
-  dim: string;
+  items: { href: string; label: string; icon: LucideIcon; badge?: number }[];
 }
 
-// ── RIG OS Agency Navigation ──────────────────────────────────────
-const NAV: NavItem[] = [
-  // Command
-  { href: "/",            label: "Command Center",    icon: <LayoutGrid size={16} />,    accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-
-  // Agency Operations (NEW — $10M ARR engine)
-  { href: "/agency",      label: "Agency Dashboard",  icon: <Building2 size={16} />,    accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/offerings", label: "Offerings",    icon: <Rocket size={16} />,       accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/clients", label: "Clients",        icon: <Users size={16} />,        accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/pipeline", label: "Pipeline",      icon: <Workflow size={16} />,     accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/revenue",  label: "Revenue",       icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/revenue-command", label: "Revenue Command", icon: <Rocket size={16} />, accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/proposals", label: "Proposals",    icon: <FileText size={16} />,     accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
-  { href: "/agency/contracts", label: "Contracts",   icon: <Scale size={16} />,       accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
-  { href: "/agency/invoices",  label: "Invoices",    icon: <DollarSign size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/jobs",      label: "Jobs Tracker", icon: <Briefcase size={16} />,   accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/outreach",  label: "Outreach",     icon: <Mail size={16} />,        accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/email-tracking",  label: "Email Tracking", icon: <MailCheck size={16} />, accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
-  { href: "/agency/social",    label: "Social Hub",    icon: <Share2 size={16} />,      accent: "#0a66c2", dim: "rgba(10,102,194,0.16)" },
-  { href: "/agency/stripe",    label: "Stripe Center", icon: <CreditCard size={16} />,  accent: "#635bff", dim: "rgba(99,91,255,0.16)" },
-  { href: "/agency/ads",       label: "Ad Campaigns",  icon: <Megaphone size={16} />,   accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/agency/teasers",   label: "Teasers",       icon: <Eye size={16} />,         accent: "#c4607e", dim: "rgba(196,96,126,0.16)" },
-  { href: "/agency/briefing",  label: "Daily Briefing",icon: <Newspaper size={16} />,   accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/seo",       label: "SEO Command",   icon: <Search size={16} />,      accent: "#a3e635", dim: "rgba(163,230,53,0.16)" },
-  { href: "/agency/scraping",  label: "Scraping Ops",  icon: <HardDrive size={16} />,   accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
-  { href: "/agency/recall",    label: "Recall",        icon: <History size={16} />,     accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
-  { href: "/agency/portals",   label: "Client Portals",icon: <DoorOpen size={16} />,    accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/agents",    label: "Agent Roster",  icon: <Bot size={16} />,         accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
-  { href: "/agency/fleet",     label: "Fleet Ops",     icon: <Boxes size={16} />,       accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/agency/harbor",    label: "Harbor Node",   icon: <Anchor size={16} />,      accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
-  { href: "/agency/spend",     label: "Spend Tracker", icon: <Wallet size={16} />,      accent: "#f97316", dim: "rgba(249,115,22,0.16)" },
-  { href: "/agency/health",    label: "System Health", icon: <Activity size={16} />,    accent: "#5ab896", dim: "rgba(90,184,150,0.16)" },
-  { href: "/agency/capabilities", label: "Capabilities", icon: <Cpu size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-
-  // RIG Orchestration (ENTERPRISE)
-  { href: "/fleet",         label: "Fleet Command",     icon: <Server size={16} />,       accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
-  { href: "/orchestration",  label: "20-Agent Team",    icon: <Radio size={16} />,        accent: "#22c55e", dim: "rgba(34,197,94,0.16)" },
-  { href: "/agency-agents",  label: "Agency Catalog",   icon: <Users size={16} />,        accent: "#4a9eff", dim: "rgba(74,158,255,0.16)" },
-  { href: "/voltagents",     label: "VoltAgent Catalog", icon: <Zap size={16} />,         accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/paperclip",      label: "Paperclip 24/7",   icon: <Boxes size={16} />,        accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
-
-  // RIG Doctrine (NEW)
-  { href: "/rig-doctrine",  label: "Doctrine",        icon: <Shield size={16} />,       accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
-  { href: "/rig-fleet",     label: "Agent Fleet",     icon: <Boxes size={16} />,        accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
-  { href: "/rig-goals",     label: "Goals & OKRs",   icon: <Target size={16} />,       accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/rig-mcp",       label: "MCP Registry",   icon: <Server size={16} />,       accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
-  { href: "/rig-harness",   label: "Harnesses",      icon: <Command size={16} />,      accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
-  { href: "/rig-deviation", label: "Deviation Engines", icon: <Layers size={16} />,   accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
-  { href: "/rig-proof",     label: "Proof Packets",   icon: <Activity size={16} />,     accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/ultraplan",     label: "Ultraplan",       icon: <Rocket size={16} />,      accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-
-  // Agents (existing)
-  { href: "/claude",   label: "Claude",   icon: <AgentAvatar agent="claude" size={22} />,   accent: "#d97757", dim: "rgba(217,119,87,0.16)" },
-  { href: "/openclaw", label: "OpenClaw", icon: <AgentAvatar agent="openclaw" size={22} />, accent: "#f472b6", dim: "rgba(244,114,182,0.16)" },
-  { href: "/hermes",   label: "Hermes",   icon: <AgentAvatar agent="hermes" size={22} />,   accent: "#60a5fa", dim: "rgba(96,165,250,0.16)" },
-  { href: "/gemini",   label: "Gemini",   icon: <AgentAvatar agent="gemini" size={22} />,   accent: "#4285F4", dim: "rgba(66,133,244,0.16)" },
-  { href: "/antigravity", label: "Antigravity", icon: <AgentAvatar agent="antigravity" size={22} />, accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
-  { href: "/codex",       label: "Codex",       icon: <AgentAvatar agent="codex" size={22} />,       accent: "#22c55e", dim: "rgba(34,197,94,0.16)" },
-  { href: "/opencode",    label: "OpenCode",    icon: <AgentAvatar agent="fcc" size={22} />,        accent: "#f472b6", dim: "rgba(244,114,182,0.16)" },
-  { href: "/freeclaude",  label: "Free Claude Code", icon: <AgentAvatar agent="fcc" size={22} />,    accent: "#10b981", dim: "rgba(16,185,129,0.16)" },
-  { href: "/jarvis",      label: "Jarvis",      icon: <AgentAvatar agent="hermes" size={22} />,    accent: "#60a5fa", dim: "rgba(96,165,250,0.16)" },
-
-  // Studios
-  { href: "/rig-linkedin", label: "LinkedIn Studio", icon: <Briefcase size={16} />,  accent: "#0a66c2", dim: "rgba(10,102,194,0.16)" },
-  { href: "/rig-instagram", label: "Instagram Studio", icon: <Camera size={16} />, accent: "#E1306C", dim: "rgba(225,48,108,0.16)" },
-  { href: "/rig-gtm",      label: "GTM Studio",      icon: <Rocket size={16} />,    accent: "#10b981", dim: "rgba(16,185,129,0.16)" },
-  { href: "/rig-design",   label: "Design Studio",   icon: <Wand2 size={16} />,     accent: "#ec4899", dim: "rgba(236,72,153,0.16)" },
-  { href: "/rig-strategy", label: "Strategy Studio", icon: <TrendingUp size={16} />, accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
-  { href: "/rig-app",      label: "App Studio",     icon: <Briefcase size={16} />, accent: "#f472b6", dim: "rgba(244,114,182,0.16)" },
-
-  // Self
-  { href: "/pipeline", label: "Pipeline", icon: <Workflow size={16} />, accent: "#34d399", dim: "rgba(52,211,153,0.16)" },
-  { href: "/goals",    label: "Goals",    icon: <Target size={16} />,    accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/seo",      label: "SEO",      icon: <TrendingUp size={16} />, accent: "#a3e635", dim: "rgba(163,230,53,0.16)" },
-  { href: "/video",    label: "Video",    icon: <Film size={16} />,      accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
-  { href: "/studio",   label: "Studio",   icon: <Wand2 size={16} />,     accent: "#ec4899", dim: "rgba(236,72,153,0.16)" },
-  { href: "/network",  label: "Network",  icon: <Network size={16} />,   accent: "#60a5fa", dim: "rgba(96,165,250,0.16)" },
-  { href: "/notebook", label: "Notebook", icon: <NotebookText size={16} />, accent: "#fde047", dim: "rgba(253,224,71,0.16)" },
-  { href: "/kanban",   label: "Kanban",   icon: <Columns3 size={16} />,  accent: "#14b8a6", dim: "rgba(20,184,166,0.16)" },
-  { href: "/ruflo",    label: "Workflow Swarm", icon: <Route size={16} />, accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/paperclip", label: "Paperclip", icon: <Paperclip size={16} />, accent: "#d4a574", dim: "rgba(212,165,116,0.16)" },
-  { href: "/journal",  label: "Journal",  icon: <BookOpen size={16} />,  accent: "#f59e0b", dim: "rgba(245,158,11,0.16)" },
-  { href: "/memory",   label: "Memory",   icon: <Brain size={16} />,     accent: "#22d3ee", dim: "rgba(34,211,238,0.16)" },
-  { href: "/obsidian", label: "Obsidian", icon: <BookOpen size={16} />,  accent: "#a855f7", dim: "rgba(168,85,247,0.16)" },
-
-  // System
-  { href: "/rig-ops",      label: "RIG Ops",         icon: <Shield size={16} />,    accent: "#ef4444", dim: "rgba(239,68,68,0.16)" },
-  { href: "/rig-lattice",  label: "Deviation Lattice", icon: <Layers size={16} />, accent: "#7c3aed", dim: "rgba(124,58,237,0.16)" },
-  { href: "/rig-1000x",    label: "1000x Loop",      icon: <Zap size={16} />,       accent: "#fbbf24", dim: "rgba(251,191,36,0.16)" },
-  { href: "/guide",    label: "Build Guide", icon: <SparklesIcon size={16} />, accent: "#ec4899", dim: "rgba(236,72,153,0.16)" },
+const NAV: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/", label: "Home", icon: LayoutGrid },
+      { href: "/paperclip", label: "Paperclip", icon: Briefcase, badge: 5 },
+      { href: "/agency/briefing", label: "Briefing", icon: Newspaper },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { href: "/agency", label: "Dashboard", icon: BarChart3 },
+      { href: "/agency/revenue", label: "Revenue", icon: Wallet },
+      { href: "/agency/pipeline", label: "Pipeline", icon: Rocket },
+      { href: "/agency/clients", label: "Clients", icon: Users },
+      { href: "/agency/proposals", label: "Proposals", icon: FileText },
+      { href: "/agency/contracts", label: "Contracts", icon: FileText },
+      { href: "/agency/invoices", label: "Invoices", icon: Wallet },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { href: "/rig-gtm", label: "GTM Studio", icon: Rocket },
+      { href: "/rig-linkedin", label: "LinkedIn", icon: Users },
+      { href: "/rig-instagram", label: "Instagram", icon: Camera },
+      { href: "/agency/outreach", label: "Outreach", icon: Mail },
+      { href: "/agency/seo", label: "SEO", icon: TrendingUp },
+      { href: "/agency/social", label: "Social", icon: Users },
+    ],
+  },
+  {
+    label: "Intelligence",
+    items: [
+      { href: "/agency/agents", label: "Agents", icon: Bot, badge: 410 },
+      { href: "/rig-strategy", label: "Strategy", icon: TrendingUp },
+      { href: "/agency/fleet", label: "Fleet Ops", icon: Bot },
+      { href: "/agency-agents", label: "Agency Catalog", icon: Users },
+      { href: "/voltagents", label: "VoltAgent", icon: Zap },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/rig-app", label: "Engineering", icon: Code },
+      { href: "/rig-design", label: "Design", icon: Code },
+      { href: "/rig-doctrine", label: "Doctrine", icon: Shield },
+      { href: "/memory", label: "Memory", icon: Brain },
+      { href: "/obsidian", label: "Vault", icon: BookOpen },
+      { href: "/orchestration", label: "Orchestration", icon: Zap },
+    ],
+  },
 ];
-
-// Section groupings for labels
-const SECTION_MAP: Record<string, string> = {
-  "/agency": "Agency",
-  "/agency/offerings": "Agency",
-  "/agency/clients": "Agency",
-  "/agency/pipeline": "Agency",
-  "/agency/revenue": "Agency",
-  "/agency/jobs": "Agency",
-  "/agency/proposals": "Agency",
-  "/agency/contracts": "Agency",
-  "/agency/invoices": "Agency",
-  "/agency/outreach": "Agency",
-  "/agency/email-tracking": "Agency",
-  "/agency/social": "Agency",
-  "/agency/stripe": "Agency",
-  "/agency/ads": "Agency",
-  "/agency/teasers": "Agency",
-  "/agency/briefing": "Agency",
-  "/agency/seo": "Agency",
-  "/agency/scraping": "Agency",
-  "/agency/recall": "Agency",
-  "/agency/portals": "Agency",
-  "/agency/agents": "Agency",
-  "/agency/fleet": "Agency",
-  "/agency/harbor": "Agency",
-  "/agency/spend": "Agency",
-  "/rig-doctrine": "RIG Doctrine",
-  "/rig-fleet": "RIG Doctrine",
-  "/rig-goals": "RIG Doctrine",
-  "/rig-mcp": "RIG Doctrine",
-  "/rig-harness": "RIG Doctrine",
-  "/rig-deviation": "RIG Doctrine",
-  "/rig-proof": "RIG Doctrine",
-  "/ultraplan": "RIG Doctrine",
-  "/claude": "Agents",
-  "/openclaw": "Agents",
-  "/hermes": "Agents",
-  "/gemini": "Agents",
-  "/antigravity": "Agents",
-  "/codex": "Agents",
-  "/opencode": "Agents",
-  "/freeclaude": "Agents",
-  "/jarvis": "Agents",
-  "/rig-linkedin": "Studios",
-  "/rig-instagram": "Studios",
-  "/rig-gtm": "Studios",
-  "/agency/health": "Agency",
-  "/agency/capabilities": "Agency",
-  "/rig-design": "Studios",
-  "/rig-strategy": "Studios",
-  "/rig-app": "Studios",
-  "/pipeline": "Self",
-  "/goals": "Self",
-  "/seo": "Self",
-  "/video": "Self",
-  "/studio": "Self",
-  "/network": "Self",
-  "/notebook": "Self",
-  "/kanban": "Self",
-  "/ruflo": "Self",
-  "/paperclip": "Self",
-  "/journal": "Self",
-  "/memory": "Self",
-  "/obsidian": "Self",
-  "/rig-ops": "System",
-  "/rig-lattice": "System",
-  "/rig-1000x": "System",
-  "/guide": "System",
-};
 
 export default function Sidebar() {
   const pathname = usePathname();
-  let lastSection = "";
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggle = (label: string) => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  };
 
   return (
     <aside
-      className="hidden md:flex flex-col w-[244px] shrink-0 py-6 border-r border-[var(--line-soft)] overflow-y-auto"
-      style={{ background: "var(--bg-mid)", maxHeight: "100vh" }}
+      className="hidden md:flex flex-col w-[220px] shrink-0 h-screen overflow-y-auto border-r"
+      style={{ background: "var(--rig-sidebar)", borderColor: "var(--rig-border)" }}
     >
-      <Link href="/" className="block mb-7 px-5">
-        <div
-          className="text-[10px] uppercase tracking-[0.25em] mb-1"
-          style={{ color: "var(--cream-mute)", fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}
-        >
-          Rodgers Intelligence
+      {/* Workspace Switcher (Airwallex pattern) */}
+      <button className="flex items-center gap-2 mx-3 mt-3 mb-2 px-2 py-2 rounded-md hover:bg-black/5">
+        <div className="grid place-items-center w-7 h-7 rounded-md text-[11px] font-bold shrink-0"
+          style={{ background: "var(--rig-gold)", color: "white" }}>
+          R
         </div>
-        <div
-          className="text-xl tracking-tight"
-          style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 500, color: "var(--cream)" }}
-        >
-          RIG OS <span className="hand text-[1.3em] ml-1">Agency</span>
+        <div className="flex-1 text-left min-w-0">
+          <div className="text-[12px] font-semibold truncate" style={{ color: "var(--rig-text)" }}>RIG OS Agency</div>
+          <div className="text-[9px] truncate" style={{ color: "var(--rig-text-mute)" }}>Enterprise</div>
         </div>
-      </Link>
+        <ChevronDown size={12} style={{ color: "var(--rig-text-mute)" }} />
+      </button>
 
-      <nav className="flex flex-col gap-0.5 relative">
-        {NAV.map((item) => {
-          const section = SECTION_MAP[item.href] || "";
-          const showLabel = section !== lastSection && section !== "";
-          lastSection = section;
+      {/* Search */}
+      <div className="px-3 pb-2">
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border"
+          style={{ background: "var(--rig-card)", borderColor: "var(--rig-border)" }}>
+          <Search size={12} style={{ color: "var(--rig-text-mute)" }} />
+          <input placeholder="Search..." className="flex-1 bg-transparent border-none outline-none text-[12px]"
+            style={{ color: "var(--rig-text)" }} />
+          <kbd className="text-[8px] px-1 py-0.5 rounded font-mono"
+            style={{ background: "var(--rig-hover)", color: "var(--rig-text-mute)" }}>⌘K</kbd>
+        </div>
+      </div>
 
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+      {/* Revenue Card (Airwallex balance pattern) */}
+      <div className="mx-3 mb-2 p-2.5 rounded-md" style={{ background: "var(--rig-card)", border: "1px solid var(--rig-border)" }}>
+        <div className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "var(--rig-text-mute)" }}>MRR</div>
+        <div className="text-[16px] font-bold" style={{ color: "var(--rig-text)" }}>
+          $0<span className="text-[10px] ml-1" style={{ color: "var(--rig-text-mute)" }}>USD</span>
+        </div>
+        <div className="flex items-center gap-1 mt-0.5">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--rig-emerald)" }} />
+          <span className="text-[9px]" style={{ color: "var(--rig-text-mute)" }}>Stripe: not connected</span>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="px-2 flex-1 pb-3">
+        {NAV.map((group) => {
+          const isCollapsed = collapsed.has(group.label);
           return (
-            <div key={item.href}>
-              {showLabel && (
-                <div className="sidebar-section-label mt-5 mb-1.5 px-5">{section}</div>
-              )}
-              <Link
-                href={item.href}
-                className={`sidebar-item relative group flex items-center gap-3 py-2.5 px-5 ${active ? "active" : ""}`}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="nav-indicator"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[22px]"
-                    style={{ background: "var(--gold)", boxShadow: "0 0 10px var(--gold)" }}
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span
-                  className="shrink-0 grid place-items-center w-7 h-7 rounded-md transition"
-                  style={{ color: active ? "var(--gold)" : "var(--cream-dim)" }}
-                >
-                  {item.icon}
+            <div key={group.label} className="mb-0.5">
+              <button onClick={() => toggle(group.label)} className="w-full flex items-center gap-1 px-2 py-1 group">
+                <ChevronDown size={10}
+                  style={{ color: "var(--rig-text-mute)", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0)", transition: "transform 100ms" }} />
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--rig-text-mute)" }}>
+                  {group.label}
                 </span>
-                <span>{item.label}</span>
-              </Link>
+              </button>
+              {!isCollapsed && group.items.map((item) => {
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                return (
+                  <Link key={item.href} href={item.href}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition"
+                    style={{
+                      background: isActive ? "var(--rig-active)" : "transparent",
+                      color: isActive ? "var(--rig-text)" : "var(--rig-text-2)",
+                      fontWeight: isActive ? 500 : 400,
+                    }}
+                  >
+                    <item.icon size={14} style={{ color: isActive ? "var(--rig-text)" : "var(--rig-text-mute)" }} className="shrink-0" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                        style={{ background: "var(--rig-hover)", color: "var(--rig-text-mute)" }}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           );
         })}
       </nav>
 
-      <div className="mt-auto pt-6 mx-5 border-t border-[var(--line-soft)]">
-        <div className="sidebar-section-label mt-4 mb-2">Wired</div>
-        <div className="text-[11px] leading-relaxed mono" style={{ color: "var(--cream-dim)" }}>
-          232 agency agents · 6 RIG core<br />
-          15 MCPs · 50 goal loops<br />
-          40 deviation engines<br />
-          <span className="hand text-[1.15em]">ProofPacket</span> or it didn&apos;t happen
+      {/* Bottom: System Status */}
+      <div className="px-3 py-2 border-t" style={{ borderColor: "var(--rig-border)" }}>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--rig-emerald)" }} />
+          <span className="text-[10px]" style={{ color: "var(--rig-text-mute)" }}>Ornith:35B online</span>
         </div>
       </div>
     </aside>
@@ -262,23 +180,17 @@ export default function Sidebar() {
 
 export function MobileNav() {
   const pathname = usePathname();
-  const mobileHrefs = new Set(["/", "/agency", "/agency/pipeline", "/agency/clients", "/rig-doctrine", "/rig-fleet", "/memory"]);
-  const items = NAV.filter((item) => mobileHrefs.has(item.href));
+  const items = NAV[0].items;
   return (
-    <nav className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 panel panel-hot px-2 py-1.5 flex gap-1">
+    <nav className="md:hidden fixed bottom-2 left-1/2 -translate-x-1/2 z-40 flex gap-1 px-2 py-1.5 rounded-xl border"
+      style={{ background: "var(--rig-card)", borderColor: "var(--rig-border)", boxShadow: "var(--rig-shadow)" }}>
       {items.map((item) => {
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="grid place-items-center w-10 h-10 rounded-lg transition"
-            style={{
-              background: active ? item.dim : "transparent",
-              color: active ? item.accent : "var(--fg-dim)",
-            }}
-          >
-            {item.icon}
+          <Link key={item.href} href={item.href}
+            className="grid place-items-center w-9 h-9 rounded-lg"
+            style={{ background: isActive ? "var(--rig-active)" : "transparent" }}>
+            <item.icon size={16} style={{ color: isActive ? "var(--rig-text)" : "var(--rig-text-mute)" }} />
           </Link>
         );
       })}

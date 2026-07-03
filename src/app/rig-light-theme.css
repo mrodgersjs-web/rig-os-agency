@@ -1,0 +1,257 @@
+/* ─────────────────────────────────────────────────────────────────────
+   RIG OS — Light Theme Design System
+   Notion-inspired warmth with RIG gold/emerald/cream palette
+   ───────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Light Theme Palette ── */
+  --rig-bg:          #FAFAF8;   /* warm off-white — main background */
+  --rig-sidebar:     #F4F2EE;   /* warm light gray — sidebar */
+  --rig-card:        #FFFFFF;   /* pure white — cards and panels */
+  --rig-elevated:    #FFFFFF;   /* elevated surfaces */
+  --rig-hover:       #ECE9E4;   /* hover background */
+  --rig-active:      #E3DFD8;   /* active/selected background */
+
+  --rig-text:        #2D2438;   /* primary text — RIG deep purple darkened */
+  --rig-text-2:      #4A4356;   /* secondary text */
+  --rig-text-3:      #6B6478;   /* tertiary text */
+  --rig-text-mute:   #9B94A8;   /* muted text */
+
+  --rig-border:      #E8E5DF;   /* standard border */
+  --rig-border-soft: #F0EEE9;   /* subtle border */
+
+  --rig-gold:        #C4904A;   /* RIG gold — muted for light */
+  --rig-gold-soft:   #D4A574;   /* RIG gold — hover/active */
+  --rig-gold-bg:     #F5EDE0;   /* gold tint background */
+  
+  --rig-emerald:     #4A9D7E;   /* RIG emerald — slightly darkened */
+  --rig-emerald-bg:  #E8F3EE;   /* emerald tint background */
+  
+  --rig-plum:        #B85675;   /* RIG plum — lightened */
+  --rig-plum-bg:     #F8E8EE;   /* plum tint background */
+
+  --rig-blue:        #2563EB;   /* links and accents */
+  --rig-blue-bg:     #EFF4FE;
+
+  /* ── Status Colors ── */
+  --rig-red:         #D14545;   /* critical / error */
+  --rig-red-bg:      #FCEAEA;
+  --rig-orange:      #DB7633;   /* high priority / warning */
+  --rig-orange-bg:   #FCF0E6;
+  --rig-yellow:      #C4904A;   /* medium priority */
+  --rig-yellow-bg:   #F5EDE0;
+  --rig-green:       #4A9D7E;   /* success / done */
+  --rig-green-bg:    #E8F3EE;
+  --rig-purple:      #7C3AED;   /* info / special */
+  --rig-purple-bg:   #F0EAFC;
+
+  /* ── Shadows ── */
+  --rig-shadow-sm:   0 1px 2px rgba(0,0,0,0.04);
+  --rig-shadow:      0 2px 8px rgba(0,0,0,0.06);
+  --rig-shadow-lg:   0 8px 24px rgba(0,0,0,0.08);
+  --rig-shadow-xl:   0 16px 48px rgba(0,0,0,0.10);
+
+  /* ── Spacing ── */
+  --rig-radius:      8px;
+  --rig-radius-sm:   6px;
+  --rig-radius-lg:   12px;
+  --rig-radius-xl:   16px;
+
+  /* ── Backwards compat — map old dark vars to new light vars ── */
+  --bg-deep:      var(--rig-bg);
+  --bg-mid:       var(--rig-sidebar);
+  --bg-card:      var(--rig-card);
+  --bg-elev:      var(--rig-elevated);
+  --cream:        var(--rig-text);
+  --cream-soft:   var(--rig-text-2);
+  --cream-dim:    var(--rig-text-3);
+  --cream-mute:   var(--rig-text-mute);
+  --gold:         var(--rig-gold);
+  --gold-soft:    var(--rig-gold-soft);
+  --emerald:      var(--rig-emerald);
+  --plum:         var(--rig-plum);
+  --line:         var(--rig-border);
+  --line-soft:    var(--rig-border-soft);
+  --shadow-1:     var(--rig-shadow);
+  --shadow-2:     var(--rig-shadow-lg);
+  
+  --fg:           var(--rig-text);
+  --fg-dim:       var(--rig-text-2);
+  --fg-dimmer:    var(--rig-text-3);
+  --panel:        var(--rig-card);
+  --panel-border: var(--rig-border);
+  --panel-border-hot: var(--rig-border);
+}
+
+/* ── Base ── */
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--rig-bg);
+  color: var(--rig-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--rig-bg);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Remove old dark paper-grain overlay */
+body::before { display: none !important; }
+
+/* ── Panel / Card Components ── */
+.panel {
+  background: var(--rig-card);
+  border: 1px solid var(--rig-border);
+  border-radius: var(--rig-radius);
+  box-shadow: var(--rig-shadow-sm);
+}
+
+.panel-hot {
+  border-color: var(--rig-gold);
+  box-shadow: 0 0 0 3px var(--rig-gold-bg);
+}
+
+/* ── Sidebar Item ── */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin: 1px 0;
+  border-radius: var(--rig-radius-sm);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--rig-text-2);
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background: var(--rig-hover);
+  color: var(--rig-text);
+}
+
+.sidebar-item.active {
+  background: var(--rig-active);
+  color: var(--rig-text);
+  font-weight: 500;
+}
+
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rig-text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 16px 8px 4px;
+}
+
+/* ── Buttons ── */
+.rig-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--rig-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.rig-btn-primary {
+  background: var(--rig-gold);
+  color: white;
+}
+
+.rig-btn-primary:hover { background: var(--rig-gold-soft); }
+
+.rig-btn-ghost {
+  background: transparent;
+  color: var(--rig-text-2);
+}
+
+.rig-btn-ghost:hover {
+  background: var(--rig-hover);
+  color: var(--rig-text);
+}
+
+/* ── Status Pills ── */
+.rig-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rig-pill-critical { background: var(--rig-red-bg); color: var(--rig-red); }
+.rig-pill-high     { background: var(--rig-orange-bg); color: var(--rig-orange); }
+.rig-pill-medium   { background: var(--rig-yellow-bg); color: var(--rig-yellow); }
+.rig-pill-low      { background: var(--rig-green-bg); color: var(--rig-green); }
+.rig-pill-info     { background: var(--rig-purple-bg); color: var(--rig-purple); }
+
+/* ── Typography ── */
+h1, h2, h3, h4 { color: var(--rig-text); font-weight: 600; }
+h1 { font-size: 1.875rem; line-height: 1.3; }
+h2 { font-size: 1.375rem; line-height: 1.35; }
+h3 { font-size: 1.125rem; line-height: 1.4; }
+
+a { color: var(--rig-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Scrollbar (Notion-style subtle) ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+
+/* ── Selection ── */
+::selection {
+  background: var(--rig-gold-bg);
+  color: var(--rig-text);
+}
+
+/* ── Code blocks ── */
+code, pre {
+  font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+}
+
+pre {
+  background: var(--rig-sidebar);
+  border-radius: var(--rig-radius-sm);
+  padding: 12px 16px;
+  overflow-x: auto;
+}
+
+code {
+  background: var(--rig-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* ── Mobile Nav override ── */
+.panel-hot {
+  background: var(--rig-card) !important;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
