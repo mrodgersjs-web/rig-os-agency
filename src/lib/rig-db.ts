@@ -1,4 +1,3 @@
-import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
@@ -8,15 +7,32 @@ const DB_PATH = path.join(process.env.HOME || "/Users/rig128gb", "Developer/rig-
 const dir = path.dirname(DB_PATH);
 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-const db = new Database(DB_PATH);
+// Lazy-load better-sqlite3 to avoid build-time native module failures.
+// The native module may not compile against the running Node.js version;
+// we only need it at request time, not during `next build` page-data collection.
+let _db: any = null;
+let _loadError: string | null = null;
 
-// Enable WAL mode for concurrent reads + safe serialized writes
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-db.pragma("busy_timeout = 5000");
+function loadDb() {
+  if (_db) return _db;
+  if (_loadError) throw new Error(_loadError);
+  try {
+    // Dynamic require so the build doesn't choke on the native .node file
+    const Database = require("better-sqlite3");
+    _db = new Database(DB_PATH);
+    _db.pragma("journal_mode = WAL");
+    _db.pragma("foreign_keys = ON");
+    _db.pragma("busy_timeout = 5000");
+    initSchema(_db);
+    return _db;
+  } catch (e) {
+    _loadError = e instanceof Error ? e.message : String(e);
+    throw new Error(`SQLite unavailable: ${_loadError}`);
+  }
+}
 
-// ─── Schema ───
-db.exec(`
+function initSchema(db: any) {
+  db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -109,6 +125,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id, persona);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
+}
 
-export default db;
-export type DB = typeof db;
+// Proxy that lazily loads on first access
+const dbProxy = new Proxy({} as any, {
+  get(_target, prop) {
+    const db = loadDb();
+    const val = db[prop];
+    return typeof val === "function" ? val.bind(db) : val;
+  },
+});
+
+export default dbProxy;
+export type DB = any;
