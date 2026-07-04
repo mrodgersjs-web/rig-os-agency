@@ -21,9 +21,8 @@ registerA1("deal-weighted-value", (input: { value: number; stage: string }) => {
   return { weighted: Math.round(input.value * w), weight: w, deterministic: true };
 });
 
-// A2 — bounded LLM with forced JSON schema
+// A2 — bounded LLM with forced JSON schema (currently deterministic mock; wire to /api/local/chat)
 registerA2("summarize", async (input: { text: string }) => {
-  // In a real app, this calls Ornith with JSON schema constraint
   const words = input.text.split(/\s+/).length;
   return {
     result: {

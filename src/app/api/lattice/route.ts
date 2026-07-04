@@ -3,16 +3,13 @@
 
 import { NextResponse } from "next/server";
 import "@/lib/lattice-init";
-import {
-  parseCoordinate, formatCoordinate, createMission, getMission, getMissions,
-  advanceMission, blockMission, sealPacket, listRegistry,
-  type LatticeCoordinate, type ProofPacket,
-} from "@/lib/lattice";
+import { parseCoordinate, initLattice, formatCoordinate, createMission, getMission, getMissions, advanceMission, blockMission, sealPacket, listRegistry } from "@/lib/lattice";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  await initLattice();
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
   if (id) {
@@ -24,6 +21,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  await initLattice();
   const body = await request.json().catch(() => ({}));
   const { action } = body;
 

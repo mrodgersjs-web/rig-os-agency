@@ -30,11 +30,14 @@ interface Mission {
   packets: any[];
 }
 
+const PRESETS = ["L1-D1-A1-I1", "L2-D2-A2-R", "L3-D1-A3-S", "L4-D3-A4-I2", "L5-D1-A1-Q2"];
+
 export function LatticeHUD() {
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [coord, setCoord] = useState("L4-D1-A1-I1");
+  const [coord, setCoord] = useState("L1-D1-A1-I1");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [approvalPrompt, setApprovalPrompt] = useState<{ missionId: string; coordinate: string; intent: string } | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/lattice");
@@ -44,7 +47,15 @@ export function LatticeHUD() {
 
   useEffect(() => { load(); const i = setInterval(load, 5000); return () => clearInterval(i); }, [load]);
 
-  const run = async () => {
+  const handlerForCoord = (c: string) => {
+    const parsed = parseCoord(c);
+    if (parsed.mode === 1) return "deal-weighted-value";
+    if (parsed.mode === 2) return "score-deal";
+    if (parsed.mode === 3) return "research-agent";
+    return "strategic-decision";
+  };
+
+  const run = async (approved = false, missionId?: string) => {
     setLoading(true);
     setResult(null);
     try {
@@ -55,17 +66,36 @@ export function LatticeHUD() {
           coordinate: coord,
           intent: "Demo lattice execution",
           context: { a: 5, b: 7, stage: "proposal", value: 50000, topic: "AI agency OS", tools: ["web", "terminal"], option: "Expand to enterprise" },
-          handler: coord.endsWith("A1") ? "deal-weighted-value" : coord.includes("A2") ? "score-deal" : coord.includes("A3") ? "research-agent" : "strategic-decision",
-          approved: coord.includes("A4") ? true : undefined,
+          handler: handlerForCoord(coord),
+          approved,
+          missionId,
         }),
       });
       const d = await r.json();
+      if (d.requiresApproval && d.mission?.id) {
+        setApprovalPrompt({
+          missionId: d.mission.id,
+          coordinate: coord,
+          intent: d.mission.intent,
+        });
+      } else {
+        setApprovalPrompt(null);
+      }
       setResult(d);
       load();
     } catch (e: any) {
       setResult({ error: e.message });
     }
     setLoading(false);
+  };
+
+  const approve = () => {
+    if (!approvalPrompt) return;
+    run(true, approvalPrompt.missionId);
+  };
+
+  const deny = () => {
+    setApprovalPrompt(null);
   };
 
   const modeColor = (mode: number) => {
@@ -81,12 +111,13 @@ export function LatticeHUD() {
         <div className="flex items-center gap-2">
           <span className="text-[14px] font-semibold" style={{ color: C.text }}>RIG 3D Lattice</span>
           <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: C.goldBg, color: C.gold }}>Runtime Active</span>
+          <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: C.blueBg, color: C.blue }}>Persistence On</span>
         </div>
         <div className="text-[11px]" style={{ color: C.mute }}>{missions.length} missions tracked</div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        {["L1-D1-A1-I1", "L2-D2-A2-R", "L3-D1-A3-S", "L4-D3-A4-I2", "L5-D1-A1-Q2"].map(c => {
+        {PRESETS.map(c => {
           const parsed = parseCoord(c);
           const mc = modeColor(parsed.mode);
           return (
@@ -114,7 +145,7 @@ export function LatticeHUD() {
           style={{ background: "var(--rig-bg)", borderColor: C.border, color: C.text }}
         />
         <button
-          onClick={run}
+          onClick={() => run(false)}
           disabled={loading}
           className="px-3 py-1.5 rounded text-[12px] font-medium"
           style={{ background: C.goldBg, color: C.gold }}
@@ -122,6 +153,19 @@ export function LatticeHUD() {
           {loading ? "Running..." : "Execute Cell"}
         </button>
       </div>
+
+      {approvalPrompt && (
+        <div className="rounded-lg border p-3 mb-3" style={{ background: C.redBg, borderColor: C.red }}>
+          <div className="text-[12px] font-medium mb-2" style={{ color: C.red }}>A4 Approval Required</div>
+          <div className="text-[11px] mb-2" style={{ color: C.text }}>
+            Coordinate {approvalPrompt.coordinate} — {approvalPrompt.intent}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={approve} disabled={loading} className="px-3 py-1 rounded text-[11px] font-medium" style={{ background: C.emeraldBg, color: C.emerald }}>Approve</button>
+            <button onClick={deny} disabled={loading} className="px-3 py-1 rounded text-[11px] font-medium" style={{ background: "transparent", color: C.text2, border: `1px solid ${C.border}` }}>Deny</button>
+          </div>
+        </div>
+      )}
 
       {result && (
         <div className="rounded-lg border p-3 mb-3" style={{ background: "var(--rig-bg)", borderColor: C.border }}>

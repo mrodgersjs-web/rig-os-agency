@@ -1,9 +1,10 @@
 // src/app/api/action/route.ts
 // Generic action executor for deep-navigation action pages.
-// Runs whitelisted local commands, updates JSON stores, or triggers UI events.
+// Runs AgentForge workflow gates before any side effect.
 
 import { promises as fs } from "fs";
 import path from "path";
+import { evaluateAgentForgeGate } from "@/lib/agentforge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,31 @@ async function writeJson(file: string, data: any) {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const { scope, action, id, payload = {} } = body;
+  const { scope, action, id, payload = {}, meta = {} } = body;
+
+  // AgentForge gate check
+  const forge = evaluateAgentForgeGate({
+    scope: scope || "unknown",
+    action: action || "unknown",
+    id,
+    payload,
+    bmsMode: meta.bmsMode || "A1",
+    intent: meta.intent || `${scope}.${action}`,
+    sourceUris: meta.sourceUris || [],
+    proofPacket: meta.proofPacket,
+    approved: meta.approved === true,
+    antiGenericScore: typeof meta.antiGenericScore === "number" ? meta.antiGenericScore : 85,
+  });
+
+  if (!forge.go) {
+    return Response.json({
+      error: "AgentForge gate blocked action",
+      blockReason: forge.blockReason,
+      gates: forge.gates,
+      antiGenericScore: forge.antiGenericScore,
+      physicsBreaches: forge.physicsBreaches,
+    }, { status: 403 });
+  }
 
   try {
     switch (scope) {
@@ -52,11 +77,10 @@ export async function POST(request: Request) {
         }
 
         await writeJson(TASKS_FILE, tasks);
-        return Response.json({ ok: true, task });
+        return Response.json({ ok: true, task, agentForge: forge });
       }
 
       case "deal": {
-        // Reuse pipeline-deals API by forwarding
         const r = await fetch(`http://127.0.0.1:3737/api/agency/pipeline-deals`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -81,23 +105,26 @@ export async function POST(request: Request) {
             ok: true,
             action: "open-mailto",
             url: `mailto:${client.contactEmail}?subject=${encodeURIComponent(payload.subject || "Follow up")}`,
+            agentForge: forge,
           });
         } else if (action === "meeting") {
           return Response.json({
             ok: true,
             action: "open-calendar",
             url: "https://calendar.google.com/calendar/u/0/r",
+            agentForge: forge,
           });
         } else if (action === "proposal") {
           return Response.json({
             ok: true,
             action: "open-copilot",
             prompt: `Generate a proposal for ${client.name} (${client.serviceTier} tier, $${client.monthlyFee}/mo). Contact: ${client.contactName} \u003c${client.contactEmail}\u003e. Services: ${(client.services || []).join(", ")}. Notes: ${client.notes}`,
+            agentForge: forge,
           });
         }
 
         await writeJson(path.join(DATA_DIR, "clients.json"), clients);
-        return Response.json({ ok: true, client });
+        return Response.json({ ok: true, client, agentForge: forge });
       }
 
       case "agent": {
@@ -106,17 +133,19 @@ export async function POST(request: Request) {
             ok: true,
             action: "open-copilot",
             prompt: `Run agent ${id} with the following task: ${payload.task || "Review current priorities and suggest next actions."}`,
+            agentForge: forge,
           });
         } else if (action === "assign") {
           return Response.json({
             ok: true,
             action: "open-copilot",
             prompt: `Assign a task to agent ${id}: ${payload.task || "Review pending work"}`,
+            agentForge: forge,
           });
         } else if (action === "configure") {
-          return Response.json({ ok: true, message: `Configuration for ${id} saved (mock)` });
+          return Response.json({ ok: true, message: `Configuration for ${id} saved (mock)`, agentForge: forge });
         } else if (action === "logs") {
-          return Response.json({ ok: true, logs: [`${new Date().toISOString()} Agent ${id} loaded`, `${new Date().toISOString()} Agent ${id} idle`] });
+          return Response.json({ ok: true, logs: [`${new Date().toISOString()} Agent ${id} loaded`, `${new Date().toISOString()} Agent ${id} idle`], agentForge: forge });
         }
         return Response.json({ error: "unknown agent action" }, { status: 400 });
       }
@@ -126,6 +155,7 @@ export async function POST(request: Request) {
           ok: true,
           honest: true,
           message: `Invoice ${id}: action '${action}' requires Stripe connection. Add STRIPE_SECRET_KEY to ~/.hermes/.env to execute for real.`,
+          agentForge: forge,
         });
       }
 

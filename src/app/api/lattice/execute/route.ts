@@ -4,23 +4,34 @@
 import { NextResponse } from "next/server";
 import "@/lib/lattice-init";
 import {
-  parseCoordinate, createMission, getMission, advanceMission, sealPacket, blockMission,
-  getA1, getA2, getA3, getA4, modeName, diamondName,
+  parseCoordinate, initLattice, createMission, getMission, advanceMission, sealPacket, blockMission,
+  approveMission, getA1, getA2, getA3, getA4, modeName, diamondName,
 } from "@/lib/lattice";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  await initLattice();
   const body = await request.json().catch(() => ({}));
-  const { coordinate, intent, context, handler, approved } = body;
+  const { coordinate, intent, context, handler, approved, missionId } = body;
+
+  // Resume a blocked mission if missionId is provided
+  let mission;
+  if (missionId) {
+    mission = getMission(missionId);
+    if (!mission) return NextResponse.json({ error: "mission not found" }, { status: 404 });
+    if (mission.status === "blocked" && approved) {
+      approveMission(missionId);
+    }
+  }
 
   const coord = parseCoordinate(coordinate);
   if (!coord) {
     return NextResponse.json({ error: "invalid coordinate" }, { status: 400 });
   }
 
-  const mission = createMission(intent || "lattice execution", coord, context);
+  mission = mission || createMission(intent || "lattice execution", coord, context);
 
   // A4 requires explicit approval
   if (coord.mode === 4 && !approved) {
@@ -28,6 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       mission: getMission(mission.id),
       message: "A4 execution requires APPROVE flag",
+      requiresApproval: true,
     });
   }
 
@@ -74,7 +86,12 @@ export async function POST(request: Request) {
       coordinate: coord,
       intent: intent || "lattice execution",
       sources: [{ uri: `/api/lattice/execute`, range: `${mode}/${diamond}` }],
-      gates: [{ name: "execute", status: "PASS", headline: `${mode} executed successfully` }],
+      gates: [
+        { name: "coordinate", status: "PASS", headline: `Coordinate ${formatCoordinate(coord)} valid` },
+        { name: "approval", status: coord.mode === 4 ? "PASS" : "SKIPPED", headline: coord.mode === 4 ? "Human approval received" : "A1/A2/A3 do not require approval" },
+        { name: "tools", status: coord.mode === 3 ? "PASS" : "SKIPPED", headline: coord.mode === 3 ? `Tool allowlist: ${(context?.tools || []).join(", ")}` : "No tool allowlist needed" },
+        { name: "execute", status: "PASS", headline: `${mode} executed successfully` },
+      ],
       verdict: "GO",
     });
 
@@ -83,4 +100,8 @@ export async function POST(request: Request) {
     blockMission(mission.id, e.message);
     return NextResponse.json({ mission: getMission(mission.id), error: e.message }, { status: 500 });
   }
+}
+
+function formatCoordinate(c: ReturnType<typeof parseCoordinate>) {
+  return c ? `L${c.level}-D${c.diamond}-A${c.mode}-${c.step}` : "unknown";
 }

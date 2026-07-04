@@ -2,6 +2,9 @@
 // Coordinate: L{level}-D{diamond}-A{mode}-{step}
 // Level L1-L7, Diamond D1-D3, Mode A1-A4, Step I1/Q1/R/S/Q2/P/I2
 
+import { promises as fs } from "fs";
+import path from "path";
+
 export type LatticeLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type LatticeDiamond = 1 | 2 | 3;
 export type LatticeMode = 1 | 2 | 3 | 4;
@@ -64,10 +67,47 @@ export function diamondName(diamond: LatticeDiamond): string {
   return diamond === 1 ? "Physical" : diamond === 2 ? "Cognitive" : "Nature";
 }
 
-// In-memory mission store (replace with SQLite in production)
+// Persistence — JSON on disk, atomic writes
+const DATA_DIR = path.join(process.cwd(), "data");
+const MISSIONS_FILE = path.join(DATA_DIR, "lattice-missions.json");
+
 let missions: Mission[] = [];
+let loaded = false;
+let writeLock: Promise<any> = Promise.resolve();
+
+async function ensureDir(file: string) {
+  await fs.mkdir(path.dirname(file), { recursive: true });
+}
+
+async function loadMissions(): Promise<void> {
+  if (loaded) return;
+  try {
+    const raw = await fs.readFile(MISSIONS_FILE, "utf-8");
+    missions = JSON.parse(raw);
+  } catch {
+    missions = [];
+  }
+  loaded = true;
+}
+
+async function saveMissions(): Promise<void> {
+  await ensureDir(MISSIONS_FILE);
+  const tmp = MISSIONS_FILE + ".tmp";
+  await fs.writeFile(tmp, JSON.stringify(missions, null, 2));
+  await fs.rename(tmp, MISSIONS_FILE);
+}
+
+function queueWrite(): Promise<void> {
+  writeLock = writeLock.then(() => saveMissions()).catch(() => saveMissions());
+  return writeLock;
+}
+
+export async function initLattice(): Promise<void> {
+  await loadMissions();
+}
 
 export function createMission(intent: string, coordinate: LatticeCoordinate, context?: Record<string, any>): Mission {
+  if (!loaded) loadMissions();
   const mission: Mission = {
     id: `mission-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     intent,
@@ -77,14 +117,17 @@ export function createMission(intent: string, coordinate: LatticeCoordinate, con
     packets: [],
   };
   missions.push(mission);
+  void queueWrite();
   return mission;
 }
 
 export function getMission(id: string): Mission | undefined {
+  if (!loaded) void loadMissions();
   return missions.find((m) => m.id === id);
 }
 
 export function getMissions(): Mission[] {
+  if (!loaded) void loadMissions();
   return [...missions];
 }
 
@@ -97,6 +140,7 @@ export function sealPacket(missionId: string, packet: Omit<ProofPacket, "runId" 
     timestamp: new Date().toISOString(),
   };
   mission.packets.push(full);
+  void queueWrite();
   return full;
 }
 
@@ -109,6 +153,7 @@ export function advanceMission(missionId: string): Mission {
   } else {
     mission.status = "done";
   }
+  void queueWrite();
   return mission;
 }
 
@@ -123,6 +168,16 @@ export function blockMission(missionId: string, reason: string): Mission {
     gates: [{ name: "block", status: "FAIL", headline: reason }],
     verdict: "NO-GO",
   });
+  void queueWrite();
+  return mission;
+}
+
+export function approveMission(missionId: string): Mission {
+  const mission = getMission(missionId);
+  if (!mission) throw new Error("mission not found");
+  if (mission.status !== "blocked") throw new Error("mission is not blocked");
+  mission.status = "running";
+  void queueWrite();
   return mission;
 }
 
