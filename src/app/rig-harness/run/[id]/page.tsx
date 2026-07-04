@@ -56,21 +56,35 @@ export default function HarnessRunPage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/harness?id=${id}`);
+    // If id is a harness instance id, fetch it directly.
+    if (id.startsWith("harness-")) {
+      const r = await fetch(`/api/harness?id=${id}`);
+      const d = await r.json();
+      if (d.harness) { setHarness(d.harness); return; }
+    }
+    // Otherwise treat id as a loopId and create a fresh harness instance for it.
+    const intent = `Run ${id} via RIG harness`;
+    const r = await fetch("/api/harness", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", loopId: id, intent, context: { antiGenericScore: 90 } }),
+    });
     const d = await r.json();
     if (d.harness) setHarness(d.harness);
+    else setError(d.error || "Failed to create harness for loop");
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
 
   const action = async (actionName: string, extra?: any) => {
+    if (!harness) return;
     setLoading(true);
     setError("");
     try {
       const r = await fetch("/api/harness", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: actionName, id, ...extra }),
+        body: JSON.stringify({ action: actionName, id: harness.id, ...extra }),
       });
       const d = await r.json();
       if (d.error) setError(d.error);
