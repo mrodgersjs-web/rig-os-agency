@@ -14,6 +14,7 @@ import {
   sealPacket,
 } from "./lattice";
 import { evaluateAgentForgeGate, agentForgeFromLattice } from "./agentforge";
+import { runStrategyDepartment, StrategyArtifact } from "./strategyBridge";
 
 export interface HarnessInstance {
   id: string;
@@ -232,9 +233,46 @@ export async function runHarnessStep(harnessId: string, approved = false): Promi
     case "R":
       result = { sources: harness.context?.sources || ["/api/internal"], findings: [] };
       break;
-    case "S":
-      result = { solution: `Produced artifact for ${harness.loopName}`, artifacts: [] };
+    case "S": {
+      // Real execution layer: for strategy-7powers, shell out to the deterministic
+      // Strategy department in rig-jtbd-packs and seal a REAL hash-chained StrategyProofPacket
+      // (verify-artifact gate, GEV separation, 64-char SHA-256 chain). Other loops keep the
+      // stub until they're wired in Slice 2 — never silently fake an artifact.
+      if (harness.loopId === "strategy-7powers") {
+        let artifact: StrategyArtifact;
+        try {
+          artifact = await runStrategyDepartment();
+        } catch (e: any) {
+          // Bridge failure fails CLOSED — never fall back to a stub and claim S succeeded.
+          step.status = "blocked";
+          step.error = `strategy bridge failed: ${e.message}`;
+          harness.status = "blocked";
+          updateHarness(harnessId, { steps: harness.steps, status: "blocked" });
+          return harness;
+        }
+        result = {
+          solution: `Real StrategyProofPacket from ${artifact.department}`,
+          realArtifact: true,
+          department: artifact.department,
+          verdict: artifact.verdict,
+          finalHash: artifact.final_hash,
+          nHops: artifact.n_hops,
+          halted: artifact.halted,
+          chainTip: artifact.hops[artifact.hops.length - 1]?.self_hash,
+          bridgeSource: artifact.bridgeSource,
+          // The full packet is retained on the step for the Q2/P/I2 steps to consume.
+          hops: artifact.hops.map((h) => ({
+            worker: h.worker,
+            verdict: h.verdict,
+            artifactHash: h.artifact_hash,
+            selfHash: h.self_hash,
+          })),
+        };
+      } else {
+        result = { solution: `Produced artifact for ${harness.loopName}`, artifacts: [], realArtifact: false };
+      }
       break;
+    }
     case "Q2":
       result = { gates: forge.gates, antiGenericScore: forge.antiGenericScore, physicsBreaches: forge.physicsBreaches };
       break;
