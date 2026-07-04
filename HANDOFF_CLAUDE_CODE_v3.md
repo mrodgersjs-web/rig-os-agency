@@ -1,175 +1,76 @@
-# RIG OS Agency — Claude Code Handoff v3.0
+# RIG OS Agency — Claude Code Handoff v3.1
 
 **Repo**: https://github.com/RIGIntelligence/rig-os-agency  
-**Branch**: `main` @ `43b1ce4`  
-**Status**: Pushed, operational, native Mac app running  
-**Date**: 2026-07-04  
-**Handoff from**: Hermes (Jake RIG Agent) → Claude Code  
+**Branch**: `main` @ `f75acc4`  
+**Status**: Pushed and running locally on port 3737
 
----
+## What's Real Now
 
-## 1. WHAT JUST SHIPPED IN V3.0
+1. **3D Lattice Runtime with Persistence**
+   - File: `src/lib/lattice.ts`
+   - Missions are written atomically to `data/lattice-missions.json`
+   - `initLattice()` loads state on every API call
+   - `approveMission()` resumes blocked A4 cells by `missionId`
 
-### Direct prop passing (no more event bus)
-- `Shell.tsx` now owns `copilotPrompt`/`terminalCommand` state.
-- `CopilotDrawer` accepts `initialPrompt` prop.
-- `TerminalPanel` accepts `initialCommand` prop.
-- `DetailContext` exposes `openCopilot(prompt)` and `openTerminal(command)`.
-- All action pages call context methods directly instead of `window.dispatchEvent`.
+2. **A1/A2/A3/A4 Execution**
+   - File: `src/app/api/lattice/execute/route.ts`
+   - A1 handlers: `sum`, `health-check`, `deal-weighted-value`
+   - A2 handlers: `summarize`, `score-deal` (currently deterministic mocks)
+   - A3 handlers: `research-agent`, `pipeline-agent` (tool allowlist enforced)
+   - A4 handlers: `strategic-decision` (approval required)
 
-### Full L4 detail pages
-- `/agency/pipeline/deals/[id]` — deal properties, AI score via A2 lattice, action links
-- `/agency/clients/[id]` — client properties, services, notes, action links
-- `/agency/agents/[id]` — agent capabilities, invocation path, action links
-- `/paperclip/tasks/[id]` — task properties, priority/status, action links
-- `/agency/revenue/invoices/[id]` — invoice properties, Stripe-honest warning, action links
+3. **AgentForge Workflow Gates**
+   - File: `src/lib/agentforge.ts`
+   - Every action via `/api/action` now runs gates:
+     - intent-lock
+     - bms-mode
+     - source-required
+     - approval-gate
+     - proof-required (optional)
+     - anti-generic (threshold 80)
+     - physics-breach
+   - Read actions pass with A1. External/destructive/payment actions require A3+, approval, and source URIs.
 
-### RIG 3D Lattice Runtime (the big one)
-Every piece of work in the app can now be tagged with a coordinate and executed by mode.
+4. **A4 Approval UI**
+   - File: `src/components/LatticeHUD.tsx`
+   - Clicking `L4-D3-A4-I2` blocks and shows an "Approve / Deny" dialog
+   - Approving re-runs the cell with the same `missionId`
 
-**Files:**
-- `src/lib/lattice.ts` — coordinate parser, mission store, proof packets, registry
-- `src/lib/lattice-handlers.ts` — A1/A2/A3/A4 handler implementations
-- `src/lib/lattice-init.ts` — ensures handlers register at runtime
-- `src/app/api/lattice/route.ts` — mission CRUD + packet sealing
-- `src/app/api/lattice/execute/route.ts` — coordinate execution engine
-- `src/app/api/lattice/registry/route.ts` — available cells
-- `src/components/LatticeHUD.tsx` — live lattice panel on home page
+## Verified Behaviors
 
-**Coordinate format:** `L{level}-D{diamond}-A{mode}-{step}`
-- Level: 1-7
-- Diamond: 1 Physical, 2 Cognitive, 3 Nature
-- Mode: 1 A1, 2 A2, 3 A3, 4 A4
-- Step: I1, Q1, R, S, Q2, P, I2 (IQRSQPI)
+- A4 without approval → `status: blocked`, `verdict: NO-GO`
+- A4 with approval → second packet appended, `verdict: GO`
+- A3 without tools → blocked
+- A3 with tools → `status: done`, `verdict: GO`
+- `/api/action` read → passes, executes
+- `/api/action` destructive without approval → 403 blocked with gate breakdown
+- `/api/action` external without sources → blocked with "No Source No Number"
+- Mission state persists to disk and survives restarts
 
-**Modes implemented:**
-- **A1** — deterministic functions: `health-check`, `sum`, `deal-weighted-value`
-- **A2** — bounded LLM with forced JSON schema: `summarize`, `score-deal`
-- **A3** — governed agent workflow with tool allowlist: `research-agent`, `pipeline-agent`
-- **A4** — strategic reasoning requiring explicit `approved: true`: `strategic-decision`
+## What's Still Mocked
 
-### Verified working
-```bash
-curl -s -X POST http://127.0.0.1:3737/api/lattice/execute \
-  -H "Content-Type: application/json" \
-  -d '{"coordinate":"L3-D2-A2-R","intent":"Score deal","handler":"score-deal","context":{"deal":{"stage":"proposal"}}}'
-# Returns mission with GO verdict
-```
+- A2 currently returns deterministic summaries, not real LLM calls
+- Invoice scope returns an honest message about needing Stripe
+- Some client/deal action fallbacks use mock data
 
----
+## Next Safe Actions
 
-## 2. ARCHITECTURE
+1. Wire A2 handlers to `/api/local/chat` (Ollama) or `/api/models/router` for real bounded LLM output
+2. Add a real Stripe handler for invoice actions
+3. Add A4 approval hooks to action pages (client delete, deal cancel, external sends)
+4. Add cleanup policy to `data/lattice-missions.json` (retention window)
 
-```
-UI (L1-L4 pages, LatticeHUD, DetailPanel)
-  ↓ fetch
-API Routes (/api/lattice/*, /api/action, /api/*)
-  ↓ call
-Lattice Runtime (src/lib/lattice.ts + handlers)
-  ↓ execute
-A1 function | A2 JSON LLM | A3 agent workflow | A4 strategic approval
-```
-
----
-
-## 3. RUN COMMANDS
+## Test Commands
 
 ```bash
 cd ~/Developer/rig-os-agency
-npm run build
-pm2 restart rig-os-agency
+curl -s http://127.0.0.1:3737/api/lattice | python3 -m json.tool
 
-# Native app
-cd ~/Developer/rig-native-app && ./build.sh
-cp -R build/"RIG OS.app" /Applications/
-open /Applications/"RIG OS.app"
-```
-
-### Verify
-```bash
-# L4 detail pages
-for route in agency/pipeline/deals/d-001 agency/clients/c001 agency/agents/hermes paperclip/tasks/1 agency/revenue/invoices/1; do
-  curl -s -o /dev/null -w "/$route: %{http_code}\n" http://127.0.0.1:3737/$route
-done
-
-# Lattice APIs
-curl -s http://127.0.0.1:3737/api/lattice/registry | python3 -m json.tool
 curl -s -X POST http://127.0.0.1:3737/api/lattice/execute \
   -H "Content-Type: application/json" \
-  -d '{"coordinate":"L1-D1-A1-I1","intent":"health","handler":"health-check","context":{}}'
+  -d '{"coordinate":"L3-D1-A3-S","intent":"research","handler":"research-agent","context":{"topic":"AI OS","tools":["web","terminal"]}}' | python3 -m json.tool
+
+curl -s -X POST http://127.0.0.1:3737/api/action \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"agent","action":"logs","id":"jarvis","meta":{"intent":"read agent logs","bmsMode":"A1"}}' | python3 -m json.tool
 ```
-
----
-
-## 4. DESIGN SYSTEM
-
-Same as v2.0. See `src/app/rig-light-theme.css`.
-
----
-
-## 5. NEXT SAFE ACTIONS FOR CLAUDE CODE
-
-### 1. Persist missions and proof packets
-Currently in-memory. Move to SQLite/JSON in `data/lattice-missions.json` so they survive restart.
-
-### 2. Auto-tag every app action with a lattice coordinate
-Every button click, every API call, every task/deal/client mutation should emit a coordinate. Example:
-- "Mark task complete" → `L2-D1-A1-I2`
-- "Generate proposal" → `L3-D2-A2-S`
-- "Run agent" → `L4-D1-A3-I2`
-- "Strategic decision" → `L7-D3-A4-I2` (requires approval)
-
-### 3. Build the mission log page
-`/agency/lattice` or `/lattice` — show all missions, coordinates, proof packets, verdicts.
-
-### 4. Add approval UI for A4
-When an action maps to A4, show an approval modal. Only proceed when Mike confirms.
-
-### 5. Implement real A2 LLM calls
-Currently A2 handlers are mocked. Wire them to `/api/local/chat` (Ornith) with JSON schema enforcement and Pydantic-style validation.
-
-### 6. Add more A1 handlers
-- `calculate-mrr`
-- `stage-weight`
-- `client-health-score`
-- `task-priority-sort`
-
-### 7. Add A3 tool executor
-A3 handlers should actually call allowed tools (e.g., if `api-write` is allowed, call the API; if `terminal` allowed, run terminal command). Build a tool dispatcher.
-
-### 8. Anti-Generic and deviation engines
-Add a scoring endpoint `/api/deviation/score` that runs the 40 deviation engines on any artifact. Wire it into the proof packet as a gate.
-
-### 9. Expand lattice to studios
-Apply coordinates to LinkedIn, Instagram, GTM, Strategy, Engineering, Design actions.
-
-### 10. Build the global ⌘K palette
-Command palette that can:
-- Jump to any page
-- Trigger any lattice cell
-- Show recent missions
-- Open any agent
-
----
-
-## 6. QUALITY BAR
-
-Before any PR or handoff claim:
-- [ ] `npm run build` passes.
-- [ ] L4 detail pages return 200.
-- [ ] Lattice execute returns `GO` for A1/A2/A3 (with tools)/A4 (with approved).
-- [ ] No `window.dispatchEvent` for Copilot/Terminal anywhere.
-- [ ] No raw secrets.
-- [ ] Light theme tokens used.
-
----
-
-## 7. CONTEXT
-
-- **Mike's context**: RIGIntelligence, $10M ARR goal, Truth Gate.
-- **Do not**: bulk-publish, send DMs, present mock as real.
-- **Do**: tag every meaningful action with a lattice coordinate and produce proof.
-
----
-
-End of handoff v3.0. Start with Section 5, item 1 (persist missions).
