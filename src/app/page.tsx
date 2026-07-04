@@ -7,7 +7,8 @@ import {
   Users, Bot, Newspaper, ChevronRight, Clock,
   CheckCircle2, AlertCircle, Sparkles,
 } from "lucide-react";
-import { useDetail, type DetailItem } from "@/components/DetailContext";
+import { LatticeHUD } from "@/components/LatticeHUD";
+import { useDetail } from "@/components/DetailContext";
 
 const C = {
   bg: "var(--rig-bg)",
@@ -116,6 +117,8 @@ export default function HomePage() {
 
   return (
     <div className="px-6 py-5 pb-20">
+      <LatticeHUD />
+
       {/* Greeting */}
       <div className="mb-8">
         <motion.h1

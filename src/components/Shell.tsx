@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import Sidebar, { MobileNav } from "./Sidebar";
 import TopBar from "./TopBar";
 import { CopilotDrawer } from "./CopilotDrawer";
@@ -9,27 +9,41 @@ import { DetailProvider } from "./DetailContext";
 
 export default function Shell({ children }: { children: ReactNode }) {
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotPrompt, setCopilotPrompt] = useState("");
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalCommand, setTerminalCommand] = useState("");
 
-  useEffect(() => {
-    const onOpenCopilot = () => setCopilotOpen(true);
-    const onRunTerminal = () => setTerminalOpen(true);
-    window.addEventListener("open-copilot", onOpenCopilot);
-    window.addEventListener("run-terminal", onRunTerminal);
-    return () => {
-      window.removeEventListener("open-copilot", onOpenCopilot);
-      window.removeEventListener("run-terminal", onRunTerminal);
-    };
+  const openCopilot = useCallback((prompt = "") => {
+    setCopilotPrompt(prompt);
+    setCopilotOpen(true);
+  }, []);
+
+  const closeCopilot = useCallback(() => {
+    setCopilotOpen(false);
+    setTimeout(() => setCopilotPrompt(""), 300);
+  }, []);
+
+  const openTerminal = useCallback((command = "") => {
+    setTerminalCommand(command);
+    setTerminalOpen(true);
+  }, []);
+
+  const closeTerminal = useCallback(() => {
+    setTerminalOpen(false);
+    setTimeout(() => setTerminalCommand(""), 300);
   }, []);
 
   return (
-    <DetailProvider>
+    <DetailProvider openCopilot={openCopilot} openTerminal={openTerminal}>
       <div className="h-screen flex overflow-hidden" style={{ background: "var(--rig-bg)" }}>
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopBar
-            onOpenCopilot={() => setCopilotOpen(true)}
-            onToggleTerminal={() => setTerminalOpen(s => !s)}
+            onOpenCopilot={() => openCopilot("")}
+            onToggleTerminal={() => {
+              if (terminalOpen) closeTerminal();
+              else openTerminal("");
+            }}
             terminalOpen={terminalOpen}
           />
           <main className="flex-1 overflow-y-auto">
@@ -40,12 +54,14 @@ export default function Shell({ children }: { children: ReactNode }) {
 
         <CopilotDrawer
           open={copilotOpen}
-          onClose={() => setCopilotOpen(false)}
+          onClose={closeCopilot}
           personaId="jake"
+          initialPrompt={copilotPrompt}
         />
         <TerminalPanel
           open={terminalOpen}
-          onClose={() => setTerminalOpen(false)}
+          onClose={closeTerminal}
+          initialCommand={terminalCommand}
         />
       </div>
     </DetailProvider>

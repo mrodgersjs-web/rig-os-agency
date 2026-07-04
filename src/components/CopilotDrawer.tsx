@@ -170,10 +170,12 @@ export function CopilotDrawer({
   open,
   onClose,
   personaId = "jarvis",
+  initialPrompt = "",
 }: {
   open: boolean;
   onClose: () => void;
   personaId?: string;
+  initialPrompt?: string;
 }) {
   const [persona, setPersona] = useState<Persona>(PERSONAS[personaId] || PERSONAS.jarvis);
   const [input, setInput] = useState("");
@@ -194,8 +196,12 @@ export function CopilotDrawer({
     if (open) {
       setMsgs(loadChat(persona.id));
       setTimeout(() => scrollRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 100);
+      if (initialPrompt) {
+        setInput(initialPrompt);
+        setTimeout(() => taRef.current?.focus(), 150);
+      }
     }
-  }, [open]);
+  }, [open, initialPrompt]);
 
   useEffect(() => {
     saveChat(persona.id, msgs);

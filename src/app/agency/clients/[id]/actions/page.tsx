@@ -21,6 +21,7 @@ export default function ClientActionsPage() {
   const [result, setResult] = useState<any>(null);
   const [input, setInput] = useState("");
   const [activeAction, setActiveAction] = useState<typeof ACTIONS[0] | null>(null);
+  const { openCopilot } = useDetail();
 
   const runAction = useCallback(async (act: typeof ACTIONS[0]) => {
     if (act.prompt && !input) {
@@ -41,7 +42,7 @@ export default function ClientActionsPage() {
       setResult(data);
 
       if (data.action === "open-copilot" && data.prompt) {
-        window.dispatchEvent(new CustomEvent("open-copilot", { detail: data.prompt }));
+        openCopilot(data.prompt);
       } else if (data.action === "open-mailto" && data.url) {
         window.open(data.url, "_blank");
       } else if (data.action === "open-calendar" && data.url) {

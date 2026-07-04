@@ -6,8 +6,10 @@ import { DetailPanel, type DetailItem } from "./DetailPanel";
 type DetailContextType = {
   selected: DetailItem | null;
   open: boolean;
-  openDetail: (item: DetailItem, options?: { runCommand?: (cmd: string) => void; openCopilot?: (prompt: string) => void }) => void;
+  openDetail: (item: DetailItem) => void;
   closeDetail: () => void;
+  openCopilot: (prompt: string) => void;
+  openTerminal: (command: string) => void;
 };
 
 const DetailContext = createContext<DetailContextType | null>(null);
@@ -18,7 +20,15 @@ export function useDetail() {
   return ctx;
 }
 
-export function DetailProvider({ children }: { children: ReactNode }) {
+export function DetailProvider({
+  children,
+  openCopilot,
+  openTerminal,
+}: {
+  children: ReactNode;
+  openCopilot: (prompt: string) => void;
+  openTerminal: (command: string) => void;
+}) {
   const [selected, setSelected] = useState<DetailItem | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -33,21 +43,14 @@ export function DetailProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <DetailContext.Provider value={{ selected, open, openDetail, closeDetail }}>
+    <DetailContext.Provider value={{ selected, open, openDetail, closeDetail, openCopilot, openTerminal }}>
       {children}
       <DetailPanel
         item={selected}
         open={open}
         onClose={closeDetail}
-        onOpenCopilot={(prompt) => {
-          // Handled via event dispatch to Shell-level Copilot
-          window.dispatchEvent(new CustomEvent("open-copilot", { detail: prompt }));
-          closeDetail();
-        }}
-        onRunCommand={(cmd) => {
-          window.dispatchEvent(new CustomEvent("run-terminal", { detail: cmd }));
-          closeDetail();
-        }}
+        onOpenCopilot={openCopilot}
+        onRunCommand={openTerminal}
       />
     </DetailContext.Provider>
   );

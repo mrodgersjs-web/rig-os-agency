@@ -12,9 +12,11 @@ interface Line {
 export function TerminalPanel({
   open,
   onClose,
+  initialCommand = "",
 }: {
   open: boolean;
   onClose: () => void;
+  initialCommand?: string;
 }) {
   const [lines, setLines] = useState<Line[]>([
     { type: "info", text: "RIG OS Terminal — Connected to Mac Studio" },
@@ -30,8 +32,11 @@ export function TerminalPanel({
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 200);
+      if (initialCommand) {
+        setInput(initialCommand);
+      }
     }
-  }, [open]);
+  }, [open, initialCommand]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 999999, behavior: "smooth" });

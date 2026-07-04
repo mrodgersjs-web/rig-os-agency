@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { PageHeader } from "@/components/DepartmentUI";
+import { useDetail } from "@/components/DetailContext";
 import { Bot, Play, Settings, ScrollText, CheckCircle2 } from "lucide-react";
 
 const ACTIONS = [
@@ -20,6 +21,7 @@ export default function AgentActionsPage() {
   const [result, setResult] = useState<any>(null);
   const [input, setInput] = useState("");
   const [activeAction, setActiveAction] = useState<typeof ACTIONS[0] | null>(null);
+  const { openCopilot } = useDetail();
 
   const runAction = useCallback(async (act: typeof ACTIONS[0]) => {
     if (act.prompt && !input) {
@@ -40,7 +42,7 @@ export default function AgentActionsPage() {
       setResult(data);
 
       if (data.action === "open-copilot" && data.prompt) {
-        window.dispatchEvent(new CustomEvent("open-copilot", { detail: data.prompt }));
+        openCopilot(data.prompt);
       }
 
       setInput("");

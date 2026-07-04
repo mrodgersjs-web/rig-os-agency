@@ -4,7 +4,8 @@ import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { PageHeader } from "@/components/DepartmentUI";
-import { ArrowRight, FileText, Mail, Trophy, XCircle, RotateCcw } from "lucide-react";
+import { useDetail } from "@/components/DetailContext";
+import { ArrowRight, FileText, Mail, Trophy, XCircle } from "lucide-react";
 
 const STAGES = ["discovery", "qualified", "proposal", "negotiation", "closed"];
 
@@ -21,6 +22,7 @@ export default function DealActionsPage() {
   const id = params?.id as string;
   const [running, setRunning] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const { openCopilot } = useDetail();
 
   const runAction = useCallback(async (act: typeof ACTIONS[0]) => {
     setRunning(act.id);
@@ -46,7 +48,7 @@ export default function DealActionsPage() {
       setResult(data);
 
       if (data.action === "open-copilot" && data.prompt) {
-        window.dispatchEvent(new CustomEvent("open-copilot", { detail: data.prompt }));
+        openCopilot(data.prompt);
       }
     } catch (e: any) {
       setResult({ error: e.message });
