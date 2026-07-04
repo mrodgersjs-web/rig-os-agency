@@ -14,7 +14,7 @@ import {
   sealPacket,
 } from "./lattice";
 import { evaluateAgentForgeGate, agentForgeFromLattice } from "./agentforge";
-import { runStrategyDepartment, StrategyArtifact } from "./strategyBridge";
+import { runDeptForLoop, deptForLoop, DeptArtifact } from "./deptBridge";
 
 export interface HarnessInstance {
   id: string;
@@ -234,33 +234,34 @@ export async function runHarnessStep(harnessId: string, approved = false): Promi
       result = { sources: harness.context?.sources || ["/api/internal"], findings: [] };
       break;
     case "S": {
-      // Real execution layer: for strategy-7powers, shell out to the deterministic
-      // Strategy department in rig-jtbd-packs and seal a REAL hash-chained StrategyProofPacket
-      // (verify-artifact gate, GEV separation, 64-char SHA-256 chain). Other loops keep the
-      // stub until they're wired in Slice 2 — never silently fake an artifact.
-      if (harness.loopId === "strategy-7powers") {
-        let artifact: StrategyArtifact;
+      // Real execution layer: any of the 50 loops mapped to one of the 7 real RIG
+      // departments shells out to its frozen Python harness and seals a REAL hash-chained
+      // ProofPacket (verify-artifact gate, GEV separation, 64-char SHA-256 chain). Loops
+      // with no dept mapping keep an honest stub (realArtifact:false). Bridge failure
+      // fails CLOSED — never falls back to a stub and claims S succeeded.
+      const dept = deptForLoop(harness.loopId);
+      if (dept) {
+        let artifact: DeptArtifact;
         try {
-          artifact = await runStrategyDepartment();
+          artifact = await runDeptForLoop(harness.loopId)!;
         } catch (e: any) {
-          // Bridge failure fails CLOSED — never fall back to a stub and claim S succeeded.
           step.status = "blocked";
-          step.error = `strategy bridge failed: ${e.message}`;
+          step.error = `dept bridge failed (${dept}): ${e.message}`;
           harness.status = "blocked";
           updateHarness(harnessId, { steps: harness.steps, status: "blocked" });
           return harness;
         }
         result = {
-          solution: `Real StrategyProofPacket from ${artifact.department}`,
+          solution: `Real ${artifact.department} ProofPacket via ${dept} dept`,
           realArtifact: true,
           department: artifact.department,
+          dept,
           verdict: artifact.verdict,
           finalHash: artifact.final_hash,
           nHops: artifact.n_hops,
           halted: artifact.halted,
           chainTip: artifact.hops[artifact.hops.length - 1]?.self_hash,
           bridgeSource: artifact.bridgeSource,
-          // The full packet is retained on the step for the Q2/P/I2 steps to consume.
           hops: artifact.hops.map((h) => ({
             worker: h.worker,
             verdict: h.verdict,
@@ -269,7 +270,12 @@ export async function runHarnessStep(harnessId: string, approved = false): Promi
           })),
         };
       } else {
-        result = { solution: `Produced artifact for ${harness.loopName}`, artifacts: [], realArtifact: false };
+        result = {
+          solution: `Produced artifact for ${harness.loopName}`,
+          artifacts: [],
+          realArtifact: false,
+          note: "no dept mapped for this loop yet (honest stub, not a fake artifact)",
+        };
       }
       break;
     }
