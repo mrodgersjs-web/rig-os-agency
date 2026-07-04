@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Command, Target, Brain, TrendingUp, Rocket, Activity,
@@ -109,8 +110,15 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function HarnessPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<string>("All");
-  const [selected, setSelected] = useState<GoalLoop | null>(null);
+  const [instances, setInstances] = useState<{ id: string; loopName: string; status: string; createdAt: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/harness")
+      .then((r) => r.json())
+      .then((d) => setInstances(d.harnesses || []));
+  }, []);
 
   const filtered = useMemo(() => {
     if (filter === "All") return LOOPS;
@@ -261,14 +269,13 @@ export default function HarnessPage() {
           {filtered.map((loop) => {
             const color = GROUP_COLORS[loop.group];
             return (
-              <div
+                <div
                 key={loop.id}
-                onClick={() => setSelected(selected?.id === loop.id ? null : loop)}
+                onClick={() => router.push(`/rig-harness/run/${loop.id}`)}
                 className="rounded-xl p-4 border cursor-pointer transition-all hover:scale-[1.02]"
                 style={{
                   background: "var(--bg-card)",
-                  borderColor: selected?.id === loop.id ? color : "var(--line-soft)",
-                  boxShadow: selected?.id === loop.id ? `0 0 0 1px ${color}44` : "none",
+                  borderColor: "var(--line-soft)",
                 }}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -289,19 +296,17 @@ export default function HarnessPage() {
                   <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ background: `${color}11`, color }}>{loop.group}</span>
                   <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ background: "var(--bg-elevated)", color: "var(--cream-dim)" }}>{loop.anchor}</span>
                 </div>
-                {selected?.id === loop.id && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-2 space-y-1">
-                    <div className="text-[10px]" style={{ color: "var(--cream-dim)" }}>
-                      <span style={{ color }}>Gate:</span> {loop.gate}
-                    </div>
-                    <div className="text-[10px]" style={{ color: "var(--cream-dim)" }}>
-                      <span style={{ color }}>Emits:</span> {loop.emits}
-                    </div>
-                    <div className="text-[10px] font-mono" style={{ color: "var(--cream-dim)" }}>
-                      hermes /goal --spec {loop.id}.yaml
-                    </div>
-                  </motion.div>
-                )}
+                <div className="text-[10px] mt-2 space-y-1">
+                  <div style={{ color: "var(--cream-dim)" }}>
+                    <span style={{ color }}>Gate:</span> {loop.gate}
+                  </div>
+                  <div style={{ color: "var(--cream-dim)" }}>
+                    <span style={{ color }}>Emits:</span> {loop.emits}
+                  </div>
+                  <div className="font-mono" style={{ color: "var(--cream-dim)" }}>
+                    hermes /goal --spec {loop.id}.yaml
+                  </div>
+                </div>
               </div>
             );
           })}

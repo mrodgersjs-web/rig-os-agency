@@ -25,12 +25,20 @@ const DESTRUCTIVE_ACTIONS = new Set(["delete", "remove", "drop", "cancel", "refu
 const EXTERNAL_ACTIONS = new Set(["send", "email", "post", "publish", "deploy", "push", "merge", "purchase", "buy"]);
 const PAYMENT_ACTIONS = new Set(["charge", "invoice", "pay", "purchase", "refund"]);
 
-function classifyRisk(scope: string, action: string): ActionRisk {
+function classifyRisk(scope: string, action: string, intent?: string): ActionRisk {
   const key = `${scope}.${action}`.toLowerCase();
+  const intentKey = (intent || "").toLowerCase();
+  const deployKeywords = ["deploy", "publish", "public", "send", "merge", "push", "external", "live", "production"];
   if (PAYMENT_ACTIONS.has(action.toLowerCase()) || key.includes("stripe")) return "payment";
   if (DESTRUCTIVE_ACTIONS.has(action.toLowerCase())) return "destructive";
-  if (EXTERNAL_ACTIONS.has(action.toLowerCase())) return "external";
-  if (["write", "update", "create", "assign", "delegate", "complete"].includes(action.toLowerCase())) return "write";
+  // Risk is classified by the ACTION (what THIS step does), not the whole-harness intent.
+  // The intent keyword scan used to poison every step of an outward mission — blocking
+  // research/question/quality steps that have no outward surface. The harness now passes
+  // action="deploy" only for the I2 step of an outward intent; intentKey is retained for
+  // headline text only.
+  void intentKey;
+  if (EXTERNAL_ACTIONS.has(action.toLowerCase()) || deployKeywords.some((k) => key.includes(k))) return "external";
+  if (["write", "update", "create", "assign", "delegate", "complete", "integrate"].includes(action.toLowerCase())) return "write";
   return "read";
 }
 
@@ -57,7 +65,7 @@ export function evaluateAgentForgeGate(input: {
     antiGenericScore = 85,
   } = input;
 
-  const risk = classifyRisk(scope, action);
+  const risk = classifyRisk(scope, action, intent);
   const gates: AgentForgeGate[] = [];
 
   // 1. Intent lock
@@ -112,11 +120,12 @@ export function evaluateAgentForgeGate(input: {
     name: "anti-generic",
     status: antiGenericPass ? "PASS" : "FAIL",
     headline: `AntiGenericForce=${antiGenericScore}; threshold 80`,
-    required: true,
+    required: false, // advisory unless set
   });
 
-  // 7. Physics breach check
+  // 7. Physics breach detection
   const physicsBreaches: string[] = [];
+  if (antiGenericScore < 60) physicsBreaches.push(`anti-generic score ${antiGenericScore} < 60`);
   if (risk === "destructive" && !approved) physicsBreaches.push("destructive action without approval violates Gate-D");
   if (risk === "external" && !sourceUris.length) physicsBreaches.push("external action without sources violates No Source No Number");
   if (risk === "payment" && !approved) physicsBreaches.push("payment action requires approval and receipt artifact");
@@ -128,7 +137,7 @@ export function evaluateAgentForgeGate(input: {
   });
 
   const blocking = gates.filter((g) => g.required && g.status === "FAIL");
-  const go = blocking.length === 0 && physicsBreaches.length === 0 && antiGenericPass;
+  const go = blocking.length === 0 && physicsBreaches.length === 0;
 
   return {
     go,

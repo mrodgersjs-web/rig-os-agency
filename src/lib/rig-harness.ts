@@ -86,6 +86,10 @@ export const GOAL_LOOPS: GoalLoop[] = [
 ];
 
 // ── Helper Functions ──────────────────────────────────────────────
+export function getGoalLoop(name: string): GoalLoop | undefined {
+  return GOAL_LOOPS.find((l) => l.name === name || (l as any).id === name);
+}
+
 export function getGoalLoops(): GoalLoop[] {
   return GOAL_LOOPS;
 }
