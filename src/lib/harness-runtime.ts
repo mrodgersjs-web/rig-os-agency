@@ -15,6 +15,7 @@ import {
 } from "./lattice";
 import { evaluateAgentForgeGate, agentForgeFromLattice } from "./agentforge";
 import { runDeptForLoop, deptForLoop, DeptArtifact } from "./deptBridge";
+import { runI2 } from "./i2Executor";
 
 export interface HarnessInstance {
   id: string;
@@ -285,9 +286,40 @@ export async function runHarnessStep(harnessId: string, approved = false): Promi
     case "P":
       result = { packetId: mission.id, sealedAt: new Date().toISOString(), verdict: "GO" };
       break;
-    case "I2":
-      result = { integrated: true, nextAction: "complete" };
+    case "I2": {
+      // The integration step is no longer a no-op. The I2 executor runs the decision
+      // layer (ProofPacket + prospect → DecisionEvent) and, only when THIS run is
+      // outward AND Gate-D approved, stages a send + records the outcome ledger.
+      // Internal intents record the decision and complete. Nothing is ever sent here —
+      // staging only; a Gate-D-armed adapter fires the real send.
+      const sStep = harness.steps.find((s) => s.stepName === "S");
+      const i2Res = await runI2({
+        prospectSlug: harness.context?.prospect,
+        sourceArtifactHash: sStep?.result?.finalHash || "no-s-step-hash",
+        sourceDept: sStep?.result?.dept || sStep?.result?.department || "unknown",
+        artifactIsSpecific: false, // GAP 4: depts still run on golden params — honest flag
+        approved,
+        isOutward: stepAction === "deploy",
+      });
+      if (!i2Res.integrated) {
+        // Executor refused (e.g. outward+required but somehow unapproved, or prospect missing).
+        step.status = "blocked";
+        step.error = `I2 executor refused: ${i2Res.note}`;
+        harness.status = "blocked";
+        updateHarness(harnessId, { steps: harness.steps, status: "blocked" });
+        return harness;
+      }
+      result = {
+        integrated: i2Res.integrated,
+        decision: i2Res.decision,
+        rationale: i2Res.decision.rationale,
+        ledgerRecorded: i2Res.ledgerRecorded,
+        sendStaged: i2Res.sendStaged,
+        stagedSend: i2Res.decision.stagedSend,
+        note: i2Res.note,
+      };
       break;
+    }
   }
 
   while (advanceMission(mission.id).status !== "done") {}
