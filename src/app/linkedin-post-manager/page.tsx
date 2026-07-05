@@ -137,8 +137,18 @@ export default function LinkedInPostManagerPage() {
     return { impressions, likes, comments, engagementRate: engRate };
   }, [posts]);
 
+  const [composerError, setComposerError] = useState<string | null>(null);
+
   const handleSaveNew = useCallback(() => {
-    if (!draftContent.trim()) return;
+    setComposerError(null);
+    if (!draftContent.trim()) {
+      setComposerError("Post content is required.");
+      return;
+    }
+    if (!draftImage) {
+      setComposerError("Image is REQUIRED — LinkedIn posts without images get ~70% less engagement. Attach an image before saving.");
+      return;
+    }
     const newPost: DraftPost = {
       id: `p${Date.now()}`,
       content: draftContent,
@@ -157,6 +167,7 @@ export default function LinkedInPostManagerPage() {
     setDraftImageName(null);
     setDraftHashtags([]);
     setDraftSchedule("");
+    setComposerError(null);
   }, [draftContent, draftImage, draftImageName, draftHashtags, draftSchedule]);
 
   /* ── Preview Modal State ───────────────────────────────────────────── */
@@ -273,6 +284,7 @@ export default function LinkedInPostManagerPage() {
                   score={eval_.score}
                   checks={eval_.checks}
                   onDelete={() => handleDelete(post.id)}
+                  onPreview={() => openPreview(post)}
                 />
               </motion.div>
             );
@@ -479,6 +491,94 @@ export default function LinkedInPostManagerPage() {
                   </motion.button>
                 </div>
               </div>
+              {composerError && (
+                <div
+                  className="mx-5 mb-4 p-3 rounded-lg flex items-start gap-2 text-xs"
+                  style={{ background: "#ef444418", border: "1px solid #ef444444", color: "#fca5a5" }}
+                >
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>{composerError}</span>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {previewPost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+            onClick={closePreview}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl border max-w-xl w-full max-h-[90vh] overflow-y-auto"
+              style={{ background: "#0A0E27", borderColor: "rgba(255,255,255,0.1)", color: "#fff" }}
+            >
+              {/* LinkedIn-style card preview */}
+              <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full grid place-items-center font-bold text-sm" style={{ background: "#d4a574", color: "#0A0E27" }}>
+                    MR
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">Mike Rodgers</div>
+                    <div className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Founder, RIG · 1st</div>
+                    <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>Just now · 🌐</div>
+                  </div>
+                </div>
+                <button onClick={closePreview} className="p-1.5 rounded-lg hover:bg-white/5">
+                  <X size={18} style={{ color: "rgba(255,255,255,0.7)" }} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {previewPost.content}
+                </div>
+                {previewPost.imageUrl && (
+                  <div
+                    className="rounded-lg border grid place-items-center text-xs font-mono"
+                    style={{
+                      height: 240,
+                      background: `linear-gradient(135deg, rgba(212,165,116,0.15), rgba(90,184,150,0.15))`,
+                      borderColor: "rgba(255,255,255,0.08)",
+                      color: "rgba(255,255,255,0.5)",
+                    }}
+                  >
+                    [ Image: {previewPost.imageName || previewPost.imageUrl} ]
+                  </div>
+                )}
+                {previewPost.hashtags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {previewPost.hashtags.map((tag) => (
+                      <span key={tag} className="text-xs font-semibold" style={{ color: "#0a66c2" }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-3 border-t flex items-center justify-around text-xs" style={{ borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                {[
+                  { icon: Heart, label: "Like" },
+                  { icon: MessageCircle, label: "Comment" },
+                  { icon: Send, label: "Repost" },
+                  { icon: Send, label: "Send" },
+                ].map((a, i) => (
+                  <button key={i} className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-white/5 font-semibold">
+                    <a.icon size={14} /> {a.label}
+                  </button>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -493,11 +593,13 @@ function PostCard({
   score,
   checks,
   onDelete,
+  onPreview,
 }: {
   post: DraftPost;
   score: number;
   checks: { label: string; pass: boolean; weight: number }[];
   onDelete: () => void;
+  onPreview: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const meta = STATUS_META[post.status];
@@ -539,7 +641,7 @@ function PostCard({
             <Trash2 size={14} style={{ color: "#ef4444" }} />
           </button>
             <button
-              onClick={() => openPreview(post)}
+              onClick={onPreview}
               className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-all"
               style={{ background: "rgba(212, 165, 116, 0.1)", color: "#d4a574", border: "1px solid rgba(212, 165, 116, 0.15)" }}
             >

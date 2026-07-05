@@ -10,6 +10,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { DecisionEvent, Prospect, StagedSend } from "./types";
 import { evaluateMargin, MarginInput } from "./margin";
+import { readCalibratedPriors } from "../forecast-eval";
 
 const PROSPECTS_DIR = path.join(process.cwd(), "data", "prospects");
 
@@ -23,20 +24,51 @@ export async function loadProspect(slug: string): Promise<Prospect | null> {
 }
 
 /**
- * Default UNCALIBRATED priors by channel. These are placeholders — the forecast-eval
- * loop (Phase 2) replaces them with Beta-posterior updates from observed outcomes.
- * Until then they are clearly labeled and MUST NOT drive auto-approve (Phase 4).
+ * Default UNCALIBRATED priors by channel — the Beta-prior BASE. Phase 2 forecast-eval
+ * updates these from observed outcomes (calibrated-priors.json). Until a channel has
+ * enough observed data (status "calibrating"/"calibrated"), we use these defaults and
+ * flag them. Auto-approve (Phase 4) must wait for "calibrated".
  */
-function priorsForChannel(channelType: string): { pReply: number; pWinGivenReply: number; costToServe: number } {
-  switch (channelType) {
-    case "referral":
-      return { pReply: 0.45, pWinGivenReply: 0.4, costToServe: 300 };
-    case "linkedin-dm":
-      return { pReply: 0.22, pWinGivenReply: 0.3, costToServe: 150 };
-    case "outbound-email":
-    default:
-      return { pReply: 0.15, pWinGivenReply: 0.3, costToServe: 200 };
+const DEFAULT_PRIORS: Record<string, { pReply: number; pWinGivenReply: number; costToServe: number }> = {
+  referral: { pReply: 0.45, pWinGivenReply: 0.4, costToServe: 300 },
+  "linkedin-dm": { pReply: 0.22, pWinGivenReply: 0.3, costToServe: 150 },
+  "outbound-email": { pReply: 0.15, pWinGivenReply: 0.3, costToServe: 200 },
+};
+
+export interface ChannelPrior {
+  pReply: number;
+  pWinGivenReply: number;
+  costToServe: number;
+  /** Where this prior came from — honest labeling for the ledger. */
+  calibrationStatus: "default" | "insufficient" | "calibrating" | "calibrated";
+}
+
+/** Resolve a channel id (e.g. "cold-email-apollo") to its TYPE. */
+function channelTypeOf(channelId: string): string {
+  if (channelId.includes("linkedin")) return "linkedin-dm";
+  if (channelId.includes("apollo") || channelId.includes("email")) return "outbound-email";
+  if (channelId.includes("intro") || channelId.includes("referral")) return "referral";
+  return "outbound-email";
+}
+
+async function priorsForChannel(channelId: string): Promise<ChannelPrior> {
+  const type = channelTypeOf(channelId);
+  const base = DEFAULT_PRIORS[type] ?? DEFAULT_PRIORS["outbound-email"];
+  const report = await readCalibratedPriors();
+  if (!report) return { ...base, calibrationStatus: "default" };
+  // Match by channel id (calibration is per-channel-id in the ledger).
+  const match = report.channels.find((c) => c.channel === channelId);
+  if (!match || match.status === "insufficient") {
+    return { ...base, calibrationStatus: match?.status ?? "insufficient" };
   }
+  // Calibrating or calibrated → use the Beta posterior mean for pReply (pWin stays default;
+  // we don't yet observe win outcomes, only reply outcomes).
+  return {
+    pReply: match.posterior.mean,
+    pWinGivenReply: base.pWinGivenReply,
+    costToServe: base.costToServe,
+    calibrationStatus: match.status,
+  };
 }
 
 export interface DecisionContext {
@@ -82,14 +114,15 @@ export async function decide(ctx: DecisionContext): Promise<DecisionEvent> {
   // D4 PRICE — the assessment ask
   const price = prospect.ask.assessmentPrice;
 
-  // Margin gate (5 enumerated gates, EV with cost side)
-  const priors = channel ? priorsForChannel(channel.type) : { pReply: 0, pWinGivenReply: 0, costToServe: 0 };
+  // Margin gate (5 enumerated gates, EV with cost side). Priors now flow from
+  // forecast-eval when calibrated data exists (Phase 2), else flagged defaults.
+  const prior = channel ? await priorsForChannel(channel.id) : { pReply: 0, pWinGivenReply: 0, costToServe: 0, calibrationStatus: "default" as const };
   const marginInput: MarginInput = {
     prospect,
     dealSize: price,
-    pReply: priors.pReply,
-    pWinGivenReply: priors.pWinGivenReply,
-    costToServe: priors.costToServe,
+    pReply: prior.pReply,
+    pWinGivenReply: prior.pWinGivenReply,
+    costToServe: prior.costToServe,
     artifactIsSpecific: ctx.artifactIsSpecific,
     sourcesGrounded: true, // we tag every HED dollar [verify in the assessment]
   };
@@ -101,6 +134,7 @@ export async function decide(ctx: DecisionContext): Promise<DecisionEvent> {
     `D4 price=$${price} (${prospect.ask.priceAsPctOfRevenue * 100}% of est. revenue); ` +
     `D3 send=${margin && margin.ship ? "staged-behind-Gate-D" : "held"} ` +
     `(margin.ship=${margin ? margin.ship : false}, EV=$${margin ? margin.ev.expectedValue.toFixed(0) : "0"}, ` +
+    `pReply=${prior.pReply.toFixed(3)} [${prior.calibrationStatus}], ` +
     `artifactIsSpecific=${ctx.artifactIsSpecific} — generic until GAP 4 closed).`;
 
   return {
