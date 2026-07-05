@@ -1,0 +1,8 @@
+--- a/src/app/api/agency/dashboard/route.ts
++++ b/src/app/api/agency/dashboard/route.ts
+@@ -28,7 +28,9 @@
+ function countRealProspects(): number {
+   try {
+     const entries = fs.readdirSync(GTM_CLIENTS_DIR, { withFileTypes: true });
+-    return 0;
++    return entries.filter((e: any) => e.isDirectory() && !e.name.startsWith('_')).length || 0;

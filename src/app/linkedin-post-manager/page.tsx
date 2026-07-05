@@ -159,6 +159,17 @@ export default function LinkedInPostManagerPage() {
     setDraftSchedule("");
   }, [draftContent, draftImage, draftImageName, draftHashtags, draftSchedule]);
 
+  /* ── Preview Modal State ───────────────────────────────────────────── */
+  const [previewPost, setPreviewPost] = useState<DraftPost | null>(null);
+
+  const openPreview = useCallback((post: DraftPost) => {
+    setPreviewPost(post);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewPost(null);
+  }, []);
+
   const handleDelete = useCallback((id: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
@@ -527,10 +538,17 @@ function PostCard({
           <button onClick={onDelete} className="p-1.5 rounded hover:bg-[var(--bg-elev)] transition-colors">
             <Trash2 size={14} style={{ color: "#ef4444" }} />
           </button>
+            <button
+              onClick={() => openPreview(post)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-all"
+              style={{ background: "rgba(212, 165, 116, 0.1)", color: "#d4a574", border: "1px solid rgba(212, 165, 116, 0.15)" }}
+            >
+              <Eye size={10} /> Preview
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Content Preview */}
+        {/* Content Preview */}
       <div className="text-sm leading-relaxed" style={{ color: "var(--cream-soft)" }}>
         {post.content.split("\n").map((line, idx) => (
           <p key={idx} className={idx > 0 ? "mt-1" : ""}>{line}</p>
