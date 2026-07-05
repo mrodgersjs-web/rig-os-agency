@@ -92,6 +92,19 @@ const NAV: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Operations",
+    items: [
+      { href: "/jobs", label: "Jobs Board", icon: Briefcase },
+      { href: "/rig-fleet", label: "Fleet", icon: Bot },
+      { href: "/rig-deviation", label: "Deviation Engines", icon: Activity },
+      { href: "/rig-1000x", label: "1000x Campaign", icon: Target },
+      { href: "/rig-lattice", label: "Lattice", icon: LayoutGrid },
+      { href: "/rig-ops", label: "Ops", icon: Settings },
+      { href: "/rig-proof", label: "Proof", icon: Shield },
+      { href: "/rig-mcp", label: "MCP Catalog", icon: Zap },
+    ],
+  },
+  {
     label: "System",
     items: [
       { href: "/rig-app", label: "Engineering", icon: Code },
