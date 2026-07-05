@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   RefreshCw, CreditCard, Users, TrendingDown, TrendingUp,
-  AlertTriangle, DollarSign, Activity, ExternalLink,
+  AlertTriangle, DollarSign, Activity, ExternalLink, Shield,
+  CheckCircle2, Circle, Building2, Key, Package, Webhook,
+  Receipt, Banknote,
 } from "lucide-react";
 
 interface Charge {
@@ -25,6 +27,35 @@ interface RevenueData {
   verifiedAt?: string;
 }
 
+interface LiveRequirement {
+  id: string;
+  label: string;
+  description: string;
+  status: "done" | "pending";
+  critical: boolean;
+}
+
+interface AgencyStripeData {
+  account?: {
+    id: string;
+    business_name?: string;
+    email?: string;
+    mode: string;
+    charges_enabled: boolean;
+    details_submitted: boolean;
+    payouts_enabled: boolean;
+  };
+  smokeTest?: {
+    customer_exists: boolean;
+    product_exists: boolean;
+    price_exists: boolean;
+  } | null;
+  liveRequirements?: LiveRequirement[];
+  readiness?: { completed: number; total: number; percent: number; label: string };
+  summary?: string;
+  generated_at?: string;
+}
+
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
@@ -36,6 +67,7 @@ function currency(n: number): string {
 
 export default function StripeDashboard() {
   const [data, setData] = useState<RevenueData | null>(null);
+  const [agencyData, setAgencyData] = useState<AgencyStripeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -43,9 +75,14 @@ export default function StripeDashboard() {
 
   const refresh = useCallback(async () => {
     try {
-      const r = await fetch("/api/stripe/revenue", { cache: "no-store" });
-      const j: RevenueData = await r.json();
+      const [revRes, agencyRes] = await Promise.all([
+        fetch("/api/stripe/revenue", { cache: "no-store" }),
+        fetch("/api/agency/stripe", { cache: "no-store" }),
+      ]);
+      const j: RevenueData = await revRes.json();
+      const a: AgencyStripeData = await agencyRes.json();
       setData(j);
+      setAgencyData(a);
       setError(null);
       setLastUpdated(Date.now());
     } catch (e) {
@@ -62,6 +99,12 @@ export default function StripeDashboard() {
   }, [refresh]);
 
   const connected = data?.connected === true;
+  const account = agencyData?.account;
+  const readiness = agencyData?.readiness;
+  const liveRequirements = agencyData?.liveRequirements ?? [];
+  const smoke = agencyData?.smokeTest;
+  const mode = account?.mode ?? "test";
+  const isLive = mode === "live";
 
   return (
     <div className="space-y-5">
@@ -131,6 +174,178 @@ export default function StripeDashboard() {
           {error}
         </div>
       )}
+
+      {/* Live Readiness Panel — path from sandbox to live */}
+      <motion.div {...fadeUp} transition={{ duration: 0.35 }}>
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--line-soft)" }}>
+            <div className="flex items-center gap-2">
+              <Shield size={14} style={{ color: isLive ? "var(--emerald)" : "var(--gold)" }} />
+              <h2 className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: "var(--cream)" }}>
+                Live Readiness
+              </h2>
+              <span
+                className="ml-1 text-[9.5px] uppercase tracking-widest px-1.5 py-0.5 rounded font-mono"
+                style={{
+                  background: isLive ? "rgba(90,184,150,0.15)" : "rgba(212,165,116,0.15)",
+                  color: isLive ? "var(--emerald)" : "var(--gold)",
+                  border: `1px solid ${isLive ? "rgba(90,184,150,0.4)" : "rgba(212,165,116,0.4)"}`,
+                }}
+              >
+                {mode}
+              </span>
+            </div>
+            <span className="text-[10.5px] uppercase tracking-widest" style={{ color: "var(--cream-mute)" }}>
+              {readiness?.label || "—"}
+            </span>
+          </div>
+
+          {/* Account identity row */}
+          {account && (
+            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Building2 size={13} style={{ color: "var(--cream-dim)" }} />
+                  <span className="text-[12px] truncate" style={{ color: "var(--cream)" }}>
+                    {account.business_name || "—"}
+                  </span>
+                </div>
+                <span className="text-[10.5px] font-mono" style={{ color: "var(--cream-mute)" }}>
+                  {account.id}
+                </span>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <StatusPill
+                    label="Charges"
+                    on={account.charges_enabled}
+                  />
+                  <StatusPill
+                    label="Details"
+                    on={account.details_submitted}
+                  />
+                  <StatusPill
+                    label="Payouts"
+                    on={account.payouts_enabled}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Progress bar */}
+          {readiness && (
+            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span style={{ color: "var(--cream-dim)" }}>
+                  {readiness.completed} of {readiness.total} requirements complete
+                </span>
+                <span className="font-mono" style={{ color: isLive ? "var(--emerald)" : "var(--gold)" }}>
+                  {readiness.percent}%
+                </span>
+              </div>
+              <div
+                className="h-1.5 rounded-full overflow-hidden"
+                style={{ background: "rgba(243,235,218,0.06)" }}
+              >
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${readiness.percent}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full"
+                  style={{
+                    background: isLive
+                      ? "linear-gradient(90deg, var(--emerald), var(--emerald-dim))"
+                      : "linear-gradient(90deg, var(--gold), var(--gold-deep))",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Requirements checklist */}
+          <div className="px-4 py-2">
+            {liveRequirements.length === 0 ? (
+              <div className="py-6 text-center text-[12px]" style={{ color: "var(--cream-dim)" }}>
+                Loading requirements…
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "var(--line-soft)" }}>
+                {liveRequirements.map((req) => {
+                  const Icon = reqIcon(req.id);
+                  return (
+                    <div
+                      key={req.id}
+                      className="flex items-start gap-3 py-2.5"
+                    >
+                      <span
+                        className="mt-0.5 shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-md"
+                        style={{
+                          background: req.status === "done" ? "rgba(90,184,150,0.12)" : "rgba(243,235,218,0.04)",
+                          color: req.status === "done" ? "var(--emerald)" : "var(--cream-mute)",
+                          border: `1px solid ${req.status === "done" ? "rgba(90,184,150,0.4)" : "var(--line-soft)"}`,
+                        }}
+                      >
+                        {req.status === "done" ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span style={{ color: "var(--cream-dim)" }}>{Icon}</span>
+                          <span
+                            className="text-[12.5px] font-medium"
+                            style={{
+                              color: req.status === "done" ? "var(--cream)" : "var(--cream-soft)",
+                            }}
+                          >
+                            {req.label}
+                          </span>
+                          {req.critical && (
+                            <span
+                              className="text-[9px] uppercase tracking-widest px-1 py-px rounded font-mono"
+                              style={{
+                                background: "rgba(196,96,126,0.12)",
+                                color: "var(--plum)",
+                                border: "1px solid rgba(196,96,126,0.3)",
+                              }}
+                            >
+                              critical
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "var(--cream-mute)" }}>
+                          {req.description}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Smoke test + summary footer */}
+          {smoke && (
+            <div
+              className="px-4 py-2.5 border-t flex items-center justify-between flex-wrap gap-2"
+              style={{ borderColor: "var(--line-soft)", background: "rgba(243,235,218,0.02)" }}
+            >
+              <div className="flex items-center gap-3 text-[10.5px] uppercase tracking-widest">
+                <span style={{ color: "var(--cream-dim)" }}>Smoke Test:</span>
+                <SmokePill label="customer" ok={smoke.customer_exists} />
+                <SmokePill label="product" ok={smoke.product_exists} />
+                <SmokePill label="price" ok={smoke.price_exists} />
+              </div>
+              {agencyData?.summary && (
+                <div className="text-[11px] max-w-md text-right" style={{ color: "var(--cream-mute)" }}>
+                  {agencyData.summary}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
 
       {/* KPI cards */}
       <motion.div {...fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -228,17 +443,24 @@ export default function StripeDashboard() {
         </div>
       </motion.div>
 
-      {/* Stripe dashboard link */}
-      <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--cream-mute)" }}>
-        <span>Source: Stripe API · `/api/stripe/revenue` · no fabrication, zero when disconnected</span>
-        <a
-          href="https://dashboard.stripe.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 hover:text-[var(--gold)] transition"
-        >
-          Stripe Dashboard <ExternalLink size={11} />
-        </a>
+      {/* Footer source line */}
+      <div className="flex items-center justify-between text-[11px] flex-wrap gap-2" style={{ color: "var(--cream-mute)" }}>
+        <span>Source: `/api/stripe/revenue` + `/api/agency/stripe` · no fabrication, real data only</span>
+        <div className="flex items-center gap-3">
+          {agencyData?.generated_at && (
+            <span className="font-mono">
+              checked {new Date(agencyData.generated_at).toLocaleTimeString()}
+            </span>
+          )}
+          <a
+            href="https://dashboard.stripe.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 hover:text-[var(--gold)] transition"
+          >
+            Stripe Dashboard <ExternalLink size={11} />
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -264,4 +486,51 @@ function KpiCard({
       <div className="text-[10.5px] mt-1" style={{ color: "var(--cream-mute)" }}>{sub}</div>
     </div>
   );
+}
+
+function StatusPill({ label, on }: { label: string; on: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded font-mono"
+      style={{
+        background: on ? "rgba(90,184,150,0.1)" : "rgba(243,235,218,0.04)",
+        color: on ? "var(--emerald)" : "var(--cream-mute)",
+        border: `1px solid ${on ? "rgba(90,184,150,0.35)" : "var(--line-soft)"}`,
+      }}
+    >
+      <span
+        className="inline-block w-1.5 h-1.5 rounded-full"
+        style={{ background: on ? "var(--emerald)" : "var(--cream-mute)" }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function SmokePill({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[9.5px] uppercase tracking-widest px-1.5 py-0.5 rounded"
+      style={{
+        background: ok ? "rgba(90,184,150,0.08)" : "rgba(243,235,218,0.04)",
+        color: ok ? "var(--emerald)" : "var(--cream-mute)",
+        border: `1px solid ${ok ? "rgba(90,184,150,0.3)" : "var(--line-soft)"}`,
+      }}
+    >
+      {ok ? "✓" : "○"} {label}
+    </span>
+  );
+}
+
+function reqIcon(id: string): React.ReactNode {
+  switch (id) {
+    case "identity": return <Building2 size={12} />;
+    case "bank": return <Banknote size={12} />;
+    case "charges": return <CreditCard size={12} />;
+    case "live_key": return <Key size={12} />;
+    case "catalog": return <Package size={12} />;
+    case "webhook": return <Webhook size={12} />;
+    case "tax": return <Receipt size={12} />;
+    default: return <Circle size={12} />;
+  }
 }
