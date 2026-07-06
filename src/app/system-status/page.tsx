@@ -53,6 +53,35 @@ interface HealthResp {
   build_artifacts?: string;
 }
 
+interface CronJob {
+  id: string;
+  name: string;
+  schedule: string;
+  next_run: string | null;
+  last_run: string | null;
+  last_status: "ok" | "error" | "never" | "unknown";
+  script: string | null;
+  deliver: string | null;
+  repeat: string | null;
+}
+interface CronSummary {
+  active_jobs: number;
+  total_jobs: number;
+  error_count: number;
+  ok_count: number;
+  never_run_count: number;
+  schedule_mode: { cron: number; interval: number; other: number };
+  next_up: CronJob | null;
+  jobs: CronJob[];
+}
+interface CronResp {
+  ok: boolean;
+  duration_ms?: number;
+  summary?: CronSummary;
+  error?: string;
+  raw?: string;
+}
+
 const C = {
   bg: "var(--bg-deep)",
   card: "var(--bg-card)",
@@ -114,6 +143,8 @@ const AGENTS: AgentPanel[] = [
 export default function SystemStatusPage() {
   const [vitals, setVitals] = useState<VitalsResp | null>(null);
   const [health, setHealth] = useState<HealthResp | null>(null);
+  const [cron, setCron] = useState<CronSummary | null>(null);
+  const [cronErr, setCronErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastFetch, setLastFetch] = useState<number>(0);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -122,12 +153,19 @@ export default function SystemStatusPage() {
 
   const load = useCallback(async () => {
     try {
-      const [vRes, hRes] = await Promise.all([
+      const [vRes, hRes, cRes] = await Promise.all([
         fetch("/api/vitals", { cache: "no-store" }).then(r => r.json()).catch(() => null),
         fetch("/api/agency/health", { cache: "no-store" }).then(r => r.json()).catch(() => null),
+        fetch("/api/hermes/cron", { cache: "no-store" }).then(r => r.json()).catch(() => null),
       ]);
       if (vRes) setVitals(vRes);
       if (hRes) setHealth(hRes);
+      if (cRes?.summary) {
+        setCron(cRes.summary);
+        setCronErr(null);
+      } else if (cRes) {
+        setCronErr(cRes.error || "no data");
+      }
       setLastFetch(Date.now());
     } catch {
       /* keep last value */
@@ -246,7 +284,106 @@ export default function SystemStatusPage() {
           color={C.gold}
           bg={`${C.gold}15`}
         />
+        <KPI
+          icon={Clock}
+          label="Cron Jobs"
+          value={cron ? `${cron.ok_count}/${cron.active_jobs}` : "—"}
+          sub={cron
+            ? cron.error_count > 0
+              ? `${cron.error_count} error${cron.error_count === 1 ? "" : "s"} · ${cron.schedule_mode.interval} interval · ${cron.schedule_mode.cron} cron`
+              : `all green · ${cron.schedule_mode.interval} interval · ${cron.schedule_mode.cron} cron`
+            : "loading…"}
+          color={cron ? (cron.error_count > 0 ? C.rose : C.emerald) : C.text3}
+          bg={cron ? `${cron.error_count > 0 ? C.rose : C.emerald}15` : `${C.text3}15`}
+        />
       </div>
+
+      {/* Cron jobs — fails first, then next-up, then a compact list */}
+      {cron && (
+        <div
+          className="rounded-xl border p-4 space-y-3"
+          style={{ background: C.card, borderColor: C.border }}
+          data-testid="cron-panel"
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Clock size={14} color={cron.error_count > 0 ? C.rose : C.emerald} />
+              <h2 className="text-[14px] font-semibold" style={{ color: C.text }}>
+                Hermes Cron
+              </h2>
+              <span className="text-[11px]" style={{ color: C.text3 }}>
+                · {cron.ok_count} ok · {cron.error_count} error · {cron.active_jobs} active
+              </span>
+            </div>
+            {cron.next_up && (
+              <div className="text-[11px] flex items-center gap-2" style={{ color: C.text2 }}>
+                <span style={{ color: C.text3 }}>Next up:</span>
+                <span style={{ color: C.text }}>{cron.next_up.name}</span>
+                <span style={{ color: C.text3 }}>·</span>
+                <span style={{ color: C.text2 }}>
+                  {cron.next_up.next_run ? new Date(cron.next_up.next_run).toLocaleString() : "—"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {cron.error_count > 0 && (
+            <div
+              className="rounded-lg border p-2.5 space-y-1"
+              style={{ background: `${C.rose}10`, borderColor: `${C.rose}40` }}
+              data-testid="cron-errors"
+            >
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle size={12} color={C.rose} />
+                <span className="text-[11px] font-semibold" style={{ color: C.rose }}>
+                  {cron.error_count} job{cron.error_count === 1 ? "" : "s"} failing
+                </span>
+              </div>
+              <div className="space-y-1">
+                {cron.jobs.filter(j => j.last_status === "error").slice(0, 8).map(j => (
+                  <div key={j.id} className="flex items-baseline justify-between gap-3 text-[11px]">
+                    <span style={{ color: C.text }} className="truncate">{j.name}</span>
+                    <span style={{ color: C.rose }} className="font-mono text-[10px] truncate">
+                      {j.last_run ? (j.last_run.split("  ")[1] || "error") : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {cron.jobs
+              .filter(j => j.last_status !== "error")
+              .sort((a, b) => {
+                const ta = a.next_run ? Date.parse(a.next_run) : Number.POSITIVE_INFINITY;
+                const tb = b.next_run ? Date.parse(b.next_run) : Number.POSITIVE_INFINITY;
+                return ta - tb;
+              })
+              .slice(0, 6)
+              .map(j => (
+                <div
+                  key={j.id}
+                  className="flex items-center justify-between gap-2 text-[11px] px-2.5 py-1.5 rounded border"
+                  style={{ background: C.bg, borderColor: C.border }}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CheckCircle2 size={11} color={C.emerald} />
+                    <span style={{ color: C.text }} className="truncate">{j.name}</span>
+                  </div>
+                  <span style={{ color: C.text3 }} className="font-mono text-[10px] shrink-0">
+                    {j.schedule}
+                  </span>
+                </div>
+              ))}
+          </div>
+          {cronErr && (
+            <div className="text-[11px]" style={{ color: C.rose }}>
+              cron API: {cronErr}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search + filter */}
       <div className="flex items-center gap-3">
