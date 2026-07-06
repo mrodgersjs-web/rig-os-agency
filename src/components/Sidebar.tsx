@@ -10,7 +10,7 @@ import {
   Zap, BookOpen, Camera, Settings,
   Receipt, CreditCard, AlertCircle, ArrowRightLeft,
   CheckCircle2, Clock, Inbox, Calendar,
-  Target, FolderOpen, Activity, Smartphone, Database, PlugZap, Server,
+  Target, FolderOpen, Activity, Smartphone, Database, PlugZap, Server, Radio,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -130,6 +130,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/rig-doctrine", label: "Doctrine", icon: Shield },
       { href: "/agency/connections", label: "Connections", icon: PlugZap },
       { href: "/agency/mcp", label: "MCP Registry", icon: Server },
+      { href: "/agency/voicebox", label: "VoiceBox Ops", icon: Radio, accent: "var(--gold)" },
       { href: "/memory", label: "Memory", icon: Brain },
       { href: "/obsidian", label: "Vault", icon: BookOpen },
       { href: "/orchestration", label: "Orchestration", icon: Zap },
