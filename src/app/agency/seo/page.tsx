@@ -1,54 +1,65 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Globe, FileCode, CheckCircle, AlertCircle,
-  TrendingUp, Layers, Zap, ExternalLink, Clock,
-  BarChart3, Target, Award, BookOpen, Rocket,
+  Activity, AlertTriangle, ArrowUp, ArrowUpRight, BarChart3, BookOpen,
+  CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, Filter,
+  Globe, Layers, LineChart, RefreshCw, Search, Sparkles, Target, TrendingUp,
+  Zap, XCircle, Hash, Rocket, Eye, Hash as HashIcon, Gauge,
 } from "lucide-react";
+
+const C = {
+  bg: "var(--bg-deep)",
+  bgMid: "var(--bg-mid)",
+  card: "var(--bg-card)",
+  elev: "var(--bg-elev)",
+  text: "var(--cream)",
+  text2: "var(--cream-soft)",
+  text3: "var(--cream-dim)",
+  textMute: "var(--cream-mute)",
+  border: "var(--line-soft)",
+  borderHot: "var(--line)",
+  gold: "var(--gold)",
+  goldSoft: "var(--gold-soft)",
+  goldDeep: "var(--gold-deep)",
+  emerald: "var(--emerald)",
+  emeraldDim: "var(--emerald-dim)",
+  plum: "var(--plum)",
+  rust: "var(--rust)",
+};
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
 };
 
-function formatNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString();
+interface SEOPages {
+  main: number;
+  offers: number;
+  blog: number;
+  total: number;
 }
 
-function daysAgo(days: number | null): string {
-  if (days === null || isNaN(days)) return "—";
-  if (days === 0) return "Today";
-  if (days === 1) return "1 day ago";
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+interface LiveSite {
+  url: string;
+  status: string;
+  http_code: number;
 }
 
-interface KeywordRow {
+interface Technical {
+  sitemap: boolean;
+  robots_txt: boolean;
+}
+
+interface Keyword {
   keyword: string;
   volume: number;
   difficulty: number;
+  sites: string[];
   intent: string;
-  totalPosts: number;
   assignedSites: { id: string; name: string; url: string }[];
-}
-
-interface SiteIndexRow {
-  id: string;
-  name: string;
-  url: string;
-  postCount: number;
-  daysSincePublish: number | null;
-}
-
-interface SiteStat {
-  site: { id: string; name: string; url: string; path: string; postsDir: string };
-  postCount: number;
-  recent: { slug: string; mtime: number; title?: string; date?: string }[];
+  totalPosts: number;
 }
 
 interface VelocityWeek {
@@ -56,723 +67,652 @@ interface VelocityWeek {
   posts: number;
 }
 
-export default function SeoPage() {
-  const [data, setData] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+interface SiteIndex {
+  id: string;
+  name: string;
+  url: string;
+  postCount: number;
+  lastPublish: string | null;
+  daysSincePublish: number | null;
+}
 
-  useEffect(() => {
-    fetch("/api/agency/seo")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then(setData)
-      .catch((e) => {
-        setError(e.message);
-        setData({});
-      });
-  }, []);
+interface SEOData {
+  pages: SEOPages;
+  live_site: LiveSite;
+  technical: Technical;
+  main_page_list: string[];
+  pipeline: { sites: any[]; totalFunnelSites: number; totalBlogPosts: number; totalFunnelPages: number };
+  keywords: Keyword[];
+  velocity: VelocityWeek[];
+  siteIndexability: SiteIndex[];
+  history: { totalSessions: number; completedSessions: number; totalDeploys: number; recentSessions: any[]; recentDeploys: any[] };
+  generated_at: string;
+}
 
-  if (!data && !error) {
-    return (
-      <div style={{ padding: "3rem", color: "var(--cream-dim)" }}>
-        Loading SEO data…
-      </div>
-    );
+const INTENT_COLORS: Record<string, string> = {
+  brand: C.gold,
+  commercial: C.emerald,
+  informational: "#4a9eff",
+  transactional: C.plum,
+};
+
+const SITE_ACCENT: Record<string, string> = {
+  rodgersintelligence: C.rust,
+  bestaiagentcommunity: "#d97757",
+  aiprofitboardroom: "#a855f7",
+  juliangoldieautomation: "#22d3ee",
+  aisuccesslab: "#ec4899",
+  aimoneylab: "#a3e635",
+};
+
+function formatNumber(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  try {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "—";
   }
+}
 
-  if (error && !data?.pages) {
-    return (
-      <div style={{ padding: "3rem", color: "var(--plum)" }}>
-        Error loading SEO data: {error}
-      </div>
-    );
-  }
-
-  const pages = data.pages || {};
-  const live = data.live_site || {};
-  const tech = data.technical || {};
-  const pipeline = data.pipeline || {};
-  const keywords: KeywordRow[] = data.keywords || [];
-  const siteIndex: SiteIndexRow[] = data.siteIndexability || [];
-  const velocity: VelocityWeek[] = data.velocity || [];
-  const history = data.history || {};
-
-  const totalKeywordVolume = keywords.reduce((s, k) => s + k.volume, 0);
-  const maxVelocity = Math.max(...velocity.map((v) => v.posts), 1);
-  const activeSites = siteIndex.filter((s) => s.postCount > 0).length;
+function HealthRing({ score, status }: { score: number; status: string }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color =
+    status === "live" && score >= 80 ? C.emerald :
+    status === "live" ? C.gold : "#ef4444";
 
   return (
-    <div className="space-y-8" style={{ minHeight: "100vh" }}>
-      {/* Header */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-3 mb-2">
-          <Search size={22} style={{ color: "var(--gold)" }} />
-          <span
-            className="text-[10px] uppercase tracking-[0.3em]"
-            style={{
-              color: "var(--cream-mute)",
-              fontFamily: "'Manrope', sans-serif",
-              fontWeight: 600,
-            }}
-          >
-            SEO Command Center
-          </span>
+    <div className="relative w-32 h-32">
+      <svg viewBox="0 0 128 128" className="w-32 h-32 -rotate-90">
+        <circle cx="64" cy="64" r={radius} fill="none" stroke={C.border} strokeWidth="8" />
+        <motion.circle
+          cx="64" cy="64" r={radius}
+          fill="none" stroke={color}
+          strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-[28px] font-bold" style={{ color }}>{score}</div>
+        <div className="text-[9px] uppercase tracking-[0.2em]" style={{ color: C.text3 }}>
+          {status === "live" ? "INDEX" : "DOWN"}
         </div>
-        <h1
-          className="text-3xl tracking-tight"
-          style={{
-            fontFamily: "'Bricolage Grotesque', sans-serif",
-            fontWeight: 500,
-            color: "var(--cream)",
-          }}
-        >
-          SEO Ranking Dashboard
-        </h1>
-        <p className="text-[14px] mt-2" style={{ color: "var(--cream-dim)" }}>
-          rodgersintelligence.com · {pipeline.totalFunnelSites || 5}-site SEO funnel ·{" "}
-          {pipeline.totalBlogPosts || 0} blog posts published ·{" "}
-          {keywords.length} keyword clusters tracked
-        </p>
-      </motion.section>
+      </div>
+    </div>
+  );
+}
 
-      {/* KPI Cards */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.05 }}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            {
-              label: "Total Funnel Pages",
-              value: pipeline.totalFunnelPages || pages.total || 31,
-              sub: `${activeSites}/${pipeline.totalFunnelSites || 5} sites active`,
-              icon: <FileCode size={18} />,
-              accent: "var(--gold)",
-            },
-            {
-              label: "Blog Posts Published",
-              value: pipeline.totalBlogPosts || 0,
-              sub: `across ${pipeline.totalFunnelSites || 5} sites`,
-              icon: <BookOpen size={18} />,
-              accent: "var(--emerald)",
-            },
-            {
-              label: "Keyword Volume Tracked",
-              value: formatNum(totalKeywordVolume),
-              sub: `${keywords.length} target clusters`,
-              icon: <TrendingUp size={18} />,
-              accent: "var(--plum)",
-            },
-            {
-              label: "Content Sessions",
-              value: history.totalSessions || 0,
-              sub: `${history.completedSessions || 0} completed`,
-              icon: <Zap size={18} />,
-              accent: "#22d3ee",
-            },
-          ].map((kpi) => (
-            <div
-              key={kpi.label}
-              className="rounded-xl p-4 border"
-              style={{
-                background: "var(--bg-card)",
-                borderColor: "var(--line-soft)",
-              }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span style={{ color: kpi.accent }}>{kpi.icon}</span>
-                <span
-                  className="text-[11px] uppercase tracking-wider"
-                  style={{ color: "var(--cream-dim)" }}
-                >
-                  {kpi.label}
-                </span>
-              </div>
-              <div
-                className="text-2xl"
+function VelocityBar({ weeks }: { weeks: VelocityWeek[] }) {
+  const max = Math.max(1, ...weeks.map((w) => w.posts));
+  return (
+    <div className="flex items-end gap-2 h-20">
+      {weeks.map((w, i) => {
+        const heightPct = (w.posts / max) * 100;
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+            <div className="w-full flex-1 flex items-end">
+              <motion.div
+                className="w-full rounded-t-sm"
                 style={{
-                  fontFamily: "'Bricolage Grotesque', sans-serif",
-                  fontWeight: 500,
-                  color: kpi.accent,
+                  background: `linear-gradient(180deg, ${C.goldSoft}, ${C.goldDeep})`,
+                  boxShadow: `0 0 12px ${C.gold}40`,
                 }}
-              >
-                {kpi.value}
-              </div>
-              <div className="text-[11px] mt-1" style={{ color: "var(--cream-mute)" }}>
-                {kpi.sub}
-              </div>
+                initial={{ height: 0 }}
+                animate={{ height: `${heightPct}%` }}
+                transition={{ duration: 0.8, delay: i * 0.1, ease: "easeOut" }}
+              />
             </div>
-          ))}
-        </div>
-      </motion.section>
-
-      {/* Live Site + Technical SEO */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.1 }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Live Site Status */}
-          <div
-            className="rounded-xl p-5 border"
-            style={{
-              background: "var(--bg-card)",
-              borderColor: live.status === "live" ? "rgba(90,184,150,0.3)" : "rgba(196,96,126,0.3)",
-            }}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              {live.status === "live" ? (
-                <CheckCircle size={20} style={{ color: "var(--emerald)" }} />
-              ) : (
-                <AlertCircle size={20} style={{ color: "var(--plum)" }} />
-              )}
-              <span
-                className="text-[11px] uppercase tracking-wider"
-                style={{ color: "var(--cream-dim)" }}
-              >
-                Primary Site Status
-              </span>
+            <div className="text-[9px] uppercase tracking-wider text-center" style={{ color: C.textMute }}>
+              {w.week}
             </div>
-            <div className="flex items-center gap-2">
-              <Globe size={16} style={{ color: "var(--gold)" }} />
-              <a
-                href={live.url || "https://rodgersintelligence.com"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[14px] font-semibold hover:underline"
-                style={{ color: "var(--cream)" }}
-              >
-                {live.url || "rodgersintelligence.com"}
-              </a>
-              <ExternalLink size={12} style={{ color: "var(--cream-mute)" }} />
-            </div>
-            <div
-              className="text-[12px] mt-1"
-              style={{
-                color: live.status === "live" ? "var(--emerald)" : "var(--plum)",
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
-              HTTP {live.http_code} — {live.status}
+            <div className="text-[11px] font-semibold tabular-nums" style={{ color: C.text2 }}>
+              {w.posts}
             </div>
           </div>
+        );
+      })}
+    </div>
+  );
+}
 
-          {/* Technical SEO */}
+function DifficultyMeter({ difficulty }: { difficulty: number }) {
+  const color = difficulty < 25 ? C.emerald : difficulty < 50 ? C.gold : "#ef4444";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: C.border }}>
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${difficulty}%` }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+      </div>
+      <span className="text-[11px] font-mono tabular-nums w-6 text-right" style={{ color }}>
+        {difficulty}
+      </span>
+    </div>
+  );
+}
+
+export default function SEOCommandPage() {
+  const [data, setData] = useState<SEOData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "brand" | "commercial" | "informational" | "transactional">("all");
+  const [sortBy, setSortBy] = useState<"volume" | "difficulty" | "keyword">("volume");
+  const [lastTick, setLastTick] = useState<string>("");
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/agency/seo", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json: SEOData = await res.json();
+      setData(json);
+      setError(null);
+      setLastTick(new Date().toLocaleTimeString("en-US", { hour12: false }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const id = setInterval(fetchData, 60_000); // 60s auto-refresh
+    return () => clearInterval(id);
+  }, [fetchData]);
+
+  const filteredKeywords = useMemo(() => {
+    if (!data) return [];
+    let kws = data.keywords;
+    if (filter !== "all") kws = kws.filter((k) => k.intent === filter);
+    return [...kws].sort((a, b) => {
+      if (sortBy === "volume") return b.volume - a.volume;
+      if (sortBy === "difficulty") return a.difficulty - b.difficulty;
+      return a.keyword.localeCompare(b.keyword);
+    });
+  }, [data, filter, sortBy]);
+
+  const kpis = useMemo(() => {
+    if (!data) return null;
+    const totalVolume = data.keywords.reduce((s, k) => s + k.volume, 0);
+    const avgDifficulty = data.keywords.length
+      ? data.keywords.reduce((s, k) => s + k.difficulty, 0) / data.keywords.length
+      : 0;
+    const brandKw = data.keywords.filter((k) => k.intent === "brand").length;
+    const commercialKw = data.keywords.filter((k) => k.intent === "commercial").length;
+    const indexedSites = data.siteIndexability.filter((s) => s.postCount > 0).length;
+    const indexScore = Math.round((indexedSites / Math.max(1, data.siteIndexability.length)) * 100);
+    return { totalVolume, avgDifficulty, brandKw, commercialKw, indexedSites, indexScore };
+  }, [data]);
+
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-10 h-10 rounded-full border-2"
+          style={{ borderColor: C.gold, borderTopColor: "transparent" }}
+        />
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="p-8 text-center">
+        <AlertTriangle size={32} style={{ color: C.plum }} className="mx-auto mb-3" />
+        <div className="text-[14px]" style={{ color: C.text }}>SEO API unreachable</div>
+        <div className="text-[12px] mt-1" style={{ color: C.text3 }}>{error}</div>
+        <button
+          onClick={fetchData}
+          className="mt-4 px-4 py-2 rounded-md text-[12px] font-medium"
+          style={{ background: `${C.gold}1a`, color: C.gold, border: `1px solid ${C.gold}40` }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!data || !kpis) return null;
+
+  const liveIsUp = data.live_site.status === "live" && data.live_site.http_code === 200;
+
+  return (
+    <div className="p-6 max-w-[1600px] mx-auto">
+      {/* ── HEADER ──────────────────────────────────────────────────────── */}
+      <motion.div {...fadeUp} className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
           <div
-            className="rounded-xl p-5 border"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ background: `${C.gold}1a`, border: `1px solid ${C.gold}40` }}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Layers size={18} style={{ color: "var(--gold)" }} />
-              <span
-                className="text-[11px] uppercase tracking-wider"
-                style={{ color: "var(--cream-dim)" }}
-              >
-                Technical SEO
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "sitemap.xml", ok: tech.sitemap },
-                { label: "robots.txt", ok: tech.robots_txt },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-2">
-                  {s.ok ? (
-                    <CheckCircle size={16} style={{ color: "var(--emerald)" }} />
-                  ) : (
-                    <AlertCircle size={16} style={{ color: "var(--plum)" }} />
-                  )}
-                  <div>
-                    <div className="text-[13px] font-medium" style={{ color: "var(--cream)" }}>
-                      {s.label}
-                    </div>
-                    <div
-                      className="text-[10px]"
-                      style={{ color: s.ok ? "var(--emerald)" : "var(--plum)" }}
-                    >
-                      {s.ok ? "Present" : "Missing"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--line-soft)" }}>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px]" style={{ color: "var(--cream-dim)" }}>
-                  Pages on primary site:
-                </span>
-                <span className="text-[13px] font-semibold" style={{ color: "var(--gold)" }}>
-                  {pages.main || 0} main · {pages.offers || 0} offers · {pages.blog || 0} blog = {pages.total || 0} total
-                </span>
-              </div>
+            <TrendingUp size={20} style={{ color: C.gold }} />
+          </div>
+          <div>
+            <h1 className="text-[24px] font-semibold tracking-tight" style={{ color: C.text }}>
+              SEO Command
+            </h1>
+            <div className="text-[12px]" style={{ color: C.text3 }}>
+              Multi-site search presence · 6 sites · {data.keywords.length} keyword clusters
             </div>
           </div>
         </div>
-      </motion.section>
+        <div className="flex items-center gap-3 text-[10px]" style={{ color: C.textMute }}>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: C.emerald }} />
+            auto-refresh 60s
+          </span>
+          <span>·</span>
+          <span>last tick {lastTick || "—"}</span>
+          <span>·</span>
+          <span>generated {new Date(data.generated_at).toLocaleTimeString("en-US", { hour12: false })}</span>
+          <span>·</span>
+          <span>source /api/agency/seo</span>
+        </div>
+      </motion.div>
 
-      {/* Content Velocity Chart */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.15 }}>
-        <div
-          className="rounded-xl p-6 border"
-          style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
+      {/* ── HERO KPIs ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {[
+          { label: "Total Pages", val: data.pages.total, sub: `${data.pages.main} main / ${data.pages.offers} offer / ${data.pages.blog} blog`, icon: FileText, color: C.gold },
+          { label: "Live Site", val: liveIsUp ? "LIVE" : "DOWN", sub: `HTTP ${data.live_site.http_code} · rodgersintelligence.com`, icon: Globe, color: liveIsUp ? C.emerald : "#ef4444" },
+          { label: "Keyword Volume", val: formatNumber(kpis.totalVolume), sub: `${data.keywords.length} clusters tracked`, icon: Search, color: C.goldSoft },
+          { label: "Avg Difficulty", val: kpis.avgDifficulty.toFixed(1), sub: `${kpis.brandKw} brand / ${kpis.commercialKw} commercial`, icon: Gauge, color: C.gold },
+          { label: "Indexability", val: `${kpis.indexScore}%`, sub: `${kpis.indexedSites}/${data.siteIndexability.length} sites with posts`, icon: Layers, color: kpis.indexScore >= 50 ? C.emerald : C.gold },
+          { label: "Deploys", val: data.history.totalDeploys, sub: `${data.history.totalSessions} sessions · ${data.history.completedSessions} done`, icon: Rocket, color: C.goldDeep },
+        ].map((k, i) => (
+          <motion.div
+            key={k.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="rounded-xl p-4 border"
+            style={{ background: C.card, borderColor: C.border }}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="text-[10px] uppercase tracking-widest" style={{ color: C.textMute }}>{k.label}</div>
+              <k.icon size={14} style={{ color: k.color }} />
+            </div>
+            <div className="text-[22px] font-bold tabular-nums" style={{ color: k.color }}>{k.val}</div>
+            <div className="text-[10px] mt-1 leading-tight" style={{ color: C.text3 }}>{k.sub}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ── LIVE SITE + TECHNICAL + HEALTH RING ─────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Live site status */}
+        <motion.div
+          {...fadeUp} transition={{ delay: 0.1 }}
+          className="lg:col-span-2 rounded-xl p-5 border"
+          style={{ background: C.card, borderColor: C.border }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <BarChart3 size={18} style={{ color: "var(--emerald)" }} />
-              <h2
-                className="text-[15px] font-semibold"
-                style={{ color: "var(--cream)" }}
-              >
-                Content Velocity (4 weeks)
-              </h2>
+              <Globe size={16} style={{ color: C.gold }} />
+              <div className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Live Site Status</div>
             </div>
-            <span className="text-[12px]" style={{ color: "var(--cream-dim)" }}>
-              {velocity.reduce((s, v) => s + v.posts, 0)} posts published
-            </span>
+            <a
+              href={data.live_site.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md"
+              style={{ background: `${C.gold}1a`, color: C.gold, border: `1px solid ${C.gold}40` }}
+            >
+              Open <ExternalLink size={10} />
+            </a>
           </div>
-          <div className="flex items-end gap-3" style={{ height: 120 }}>
-            {velocity.map((v, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <div
-                  className="text-[11px] font-semibold"
-                  style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  {v.posts}
-                </div>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${Math.max((v.posts / maxVelocity) * 80, v.posts > 0 ? 8 : 2)}px` }}
-                  transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
-                  className="w-full rounded-t-md"
-                  style={{
-                    background:
-                      v.posts > 0
-                        ? "linear-gradient(180deg, var(--gold), var(--gold-deep))"
-                        : "var(--bg-mid)",
-                    minHeight: 2,
-                  }}
-                />
-                <span className="text-[10px]" style={{ color: "var(--cream-mute)" }}>
-                  {v.week}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="rounded-lg p-3" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: C.textMute }}>HTTP</div>
+              <div className="flex items-center gap-2">
+                {liveIsUp ? <CheckCircle2 size={14} style={{ color: C.emerald }} /> : <XCircle size={14} style={{ color: "#ef4444" }} />}
+                <span className="text-[20px] font-bold tabular-nums" style={{ color: liveIsUp ? C.emerald : "#ef4444" }}>
+                  {data.live_site.http_code || "—"}
                 </span>
               </div>
-            ))}
+            </div>
+            <div className="rounded-lg p-3" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: C.textMute }}>Sitemap</div>
+              <div className="flex items-center gap-2">
+                {data.technical.sitemap ? <CheckCircle2 size={14} style={{ color: C.emerald }} /> : <XCircle size={14} style={{ color: C.plum }} />}
+                <span className="text-[12px]" style={{ color: data.technical.sitemap ? C.emerald : C.plum }}>
+                  {data.technical.sitemap ? "Present" : "Missing"}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-lg p-3" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: C.textMute }}>Robots.txt</div>
+              <div className="flex items-center gap-2">
+                {data.technical.robots_txt ? <CheckCircle2 size={14} style={{ color: C.emerald }} /> : <XCircle size={14} style={{ color: C.plum }} />}
+                <span className="text-[12px]" style={{ color: data.technical.robots_txt ? C.emerald : C.plum }}>
+                  {data.technical.robots_txt ? "Present" : "Missing"}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-lg p-3" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: C.textMute }}>Last Check</div>
+              <div className="text-[11px] font-mono" style={{ color: C.text2 }}>
+                {new Date(data.generated_at).toLocaleString("en-US", { hour12: false })}
+              </div>
+            </div>
           </div>
-        </div>
-      </motion.section>
-
-      {/* Keyword Cluster Tracking */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.2 }}>
-        <div className="flex items-baseline gap-3 mb-4">
-          <Target size={18} style={{ color: "var(--gold)" }} />
-          <h2
-            className="text-[18px] font-semibold"
-            style={{
-              fontFamily: "'Bricolage Grotesque', sans-serif",
-              color: "var(--cream)",
-            }}
-          >
-            Keyword Cluster Tracking
-          </h2>
-          <span className="text-[12px]" style={{ color: "var(--cream-mute)" }}>
-            {keywords.length} target keywords · {formatNum(totalKeywordVolume)} monthly search volume
-          </span>
-        </div>
-        <div
-          className="rounded-xl border overflow-hidden"
-          style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
-        >
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid var(--line-soft)",
-                  color: "var(--cream-dim)",
-                }}
-              >
-                <th className="text-left px-4 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Keyword
-                </th>
-                <th className="text-right px-3 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Volume
-                </th>
-                <th className="text-right px-3 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Difficulty
-                </th>
-                <th className="text-center px-3 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Intent
-                </th>
-                <th className="text-right px-3 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Content
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-[11px] uppercase tracking-wider">
-                  Target Sites
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {keywords.map((kw, i) => (
-                <tr
-                  key={i}
-                  style={{
-                    borderBottom: "1px solid var(--line-deep)",
-                  }}
-                  className="hover:bg-[var(--bg-elev)] transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-medium" style={{ color: "var(--cream)" }}>
-                      {kw.keyword}
-                    </div>
-                  </td>
-                  <td
-                    className="px-3 py-3 text-right font-semibold"
-                    style={{
-                      color: "var(--gold)",
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {formatNum(kw.volume)}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <div className="inline-flex items-center gap-1.5">
-                      <div
-                        className="w-8 h-1.5 rounded-full overflow-hidden"
-                        style={{ background: "var(--bg-mid)" }}
-                      >
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${kw.difficulty}%`,
-                            background:
-                              kw.difficulty > 50
-                                ? "var(--plum)"
-                                : kw.difficulty > 35
-                                  ? "var(--gold)"
-                                  : "var(--emerald)",
-                          }}
-                        />
-                      </div>
-                      <span
-                        className="text-[11px]"
-                        style={{
-                          color:
-                            kw.difficulty > 50
-                              ? "var(--plum)"
-                              : kw.difficulty > 35
-                                ? "var(--gold)"
-                                : "var(--emerald)",
-                        }}
-                      >
-                        {kw.difficulty}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
-                      style={{
-                        background:
-                          kw.intent === "brand"
-                            ? "rgba(90,184,150,0.15)"
-                            : "rgba(212,165,116,0.15)",
-                        color: kw.intent === "brand" ? "var(--emerald)" : "var(--gold)",
-                      }}
-                    >
-                      {kw.intent}
-                    </span>
-                  </td>
-                  <td
-                    className="px-3 py-3 text-right font-semibold"
-                    style={{
-                      color: kw.totalPosts > 5 ? "var(--emerald)" : "var(--cream-dim)",
-                    }}
-                  >
-                    {kw.totalPosts}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {kw.assignedSites.map((s) => (
-                        <a
-                          key={s.id}
-                          href={s.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2 py-0.5 rounded text-[10px] hover:opacity-80 transition-opacity"
-                          style={{
-                            background: "var(--bg-mid)",
-                            color: "var(--gold)",
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        >
-                          {s.name.replace(/\.(com|org|net)$/, "")}
-                        </a>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
+          {/* Page breakdown */}
+          <div>
+            <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: C.textMute }}>Page Inventory</div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { l: "Main", n: data.pages.main, color: C.gold },
+                { l: "Offer", n: data.pages.offers, color: C.emerald },
+                { l: "Blog", n: data.pages.blog, color: C.plum },
+              ].map((p) => (
+                <div key={p.l} className="rounded-md p-3" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+                  <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: C.textMute }}>{p.l}</div>
+                  <div className="text-[20px] font-bold tabular-nums" style={{ color: p.color }}>{p.n}</div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </motion.section>
-
-      {/* Multi-Site Indexability */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.25 }}>
-        <div className="flex items-baseline gap-3 mb-4">
-          <Rocket size={18} style={{ color: "var(--emerald)" }} />
-          <h2
-            className="text-[18px] font-semibold"
-            style={{
-              fontFamily: "'Bricolage Grotesque', sans-serif",
-              color: "var(--cream)",
-            }}
-          >
-            Multi-Site Funnel Indexability
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {siteIndex.map((site, i) => (
-            <div
-              key={site.id}
-              className="rounded-xl p-4 border"
-              style={{
-                background: "var(--bg-card)",
-                borderColor: "var(--line-soft)",
-              }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <a
-                  href={site.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[13px] font-semibold hover:underline truncate max-w-[180px]"
-                  style={{ color: "var(--cream)" }}
-                >
-                  {site.name}
-                </a>
-                <ExternalLink size={12} style={{ color: "var(--cream-mute)" }} />
-              </div>
-              <div className="flex items-center gap-4">
-                <div>
-                  <div
-                    className="text-[20px] font-bold"
-                    style={{
-                      color: site.postCount > 0 ? "var(--gold)" : "var(--cream-mute)",
-                      fontFamily: "'Bricolage Grotesque', sans-serif",
-                    }}
-                  >
-                    {site.postCount}
-                  </div>
-                  <div className="text-[10px]" style={{ color: "var(--cream-dim)" }}>
-                    posts
-                  </div>
-                </div>
-                <div className="flex-1 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Clock size={12} style={{ color: "var(--cream-mute)" }} />
-                    <span className="text-[11px]" style={{ color: "var(--cream-dim)" }}>
-                      {daysAgo(site.daysSincePublish)}
-                    </span>
-                  </div>
-                  <div
-                    className="text-[10px] mt-0.5"
-                    style={{
-                      color:
-                        (site.daysSincePublish ?? 999) <= 7
-                          ? "var(--emerald)"
-                          : (site.daysSincePublish ?? 999) <= 30
-                            ? "var(--gold)"
-                            : "var(--plum)",
-                    }}
-                  >
-                    {(site.daysSincePublish ?? 999) <= 7
-                      ? "Fresh content"
-                      : (site.daysSincePublish ?? 999) <= 30
-                        ? "Needs refresh"
-                        : "Stale"}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-mid)" }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.min(site.postCount * 3, 100)}%`,
-                    background:
-                      site.postCount > 20
-                        ? "var(--emerald)"
-                        : site.postCount > 5
-                          ? "var(--gold)"
-                          : "var(--plum)",
-                  }}
-                />
-              </div>
             </div>
-          ))}
-        </div>
-      </motion.section>
-
-      {/* Recent Sessions & Deploys */}
-      <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.3 }}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Recent Generate Sessions */}
-          <div
-            className="rounded-xl p-5 border"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} style={{ color: "var(--gold)" }} />
-              <h3 className="text-[14px] font-semibold" style={{ color: "var(--cream)" }}>
-                Content Generation Sessions
-              </h3>
-              <span className="text-[11px] ml-auto" style={{ color: "var(--cream-mute)" }}>
-                {history.totalSessions || 0} total · {history.completedSessions || 0} completed
-              </span>
-            </div>
-            {(history.recentSessions || []).length === 0 ? (
-              <div className="text-[12px] py-4 text-center" style={{ color: "var(--cream-mute)" }}>
-                No generation sessions yet
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                {(history.recentSessions || []).slice(0, 8).map((s: any, i: number) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 p-2 rounded-lg"
-                    style={{ background: "var(--bg-mid)" }}
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        background:
-                          s.status === "completed"
-                            ? "var(--emerald)"
-                            : s.status === "running"
-                              ? "var(--gold)"
-                              : s.status === "failed"
-                                ? "var(--plum)"
-                                : "var(--cream-mute)",
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12px] font-medium truncate" style={{ color: "var(--cream)" }}>
-                        {s.keyword}
-                      </div>
-                      <div className="text-[10px]" style={{ color: "var(--cream-mute)" }}>
-                        {s.articles?.length || 0} articles · {s.status}
-                      </div>
-                    </div>
-                    <span className="text-[10px] flex-shrink-0" style={{ color: "var(--cream-mute)" }}>
-                      {s.createdAt
-                        ? new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                        : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
+        </motion.div>
 
-          {/* Recent Deploys */}
-          <div
-            className="rounded-xl p-5 border"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Rocket size={16} style={{ color: "var(--emerald)" }} />
-              <h3 className="text-[14px] font-semibold" style={{ color: "var(--cream)" }}>
-                Recent Deploys
-              </h3>
-              <span className="text-[11px] ml-auto" style={{ color: "var(--cream-mute)" }}>
-                {history.totalDeploys || 0} total
-              </span>
+        {/* Health ring + index score */}
+        <motion.div
+          {...fadeUp} transition={{ delay: 0.15 }}
+          className="rounded-xl p-5 border flex flex-col items-center"
+          style={{ background: C.card, borderColor: C.border }}
+        >
+          <div className="text-[12px] font-semibold uppercase tracking-wider mb-3" style={{ color: C.text }}>Index Score</div>
+          <HealthRing score={kpis.indexScore} status={data.live_site.status} />
+          <div className="mt-4 text-center">
+            <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: C.textMute }}>Pipeline Pages</div>
+            <div className="text-[18px] font-bold tabular-nums" style={{ color: C.gold }}>
+              {formatNumber(data.pipeline.totalFunnelPages)}
             </div>
-            {(history.recentDeploys || []).length === 0 ? (
-              <div className="text-[12px] py-4 text-center" style={{ color: "var(--cream-mute)" }}>
-                No deploys yet
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                {(history.recentDeploys || []).slice(0, 8).map((d: any, i: number) => (
+            <div className="text-[10px] mt-1" style={{ color: C.text3 }}>
+              {data.pipeline.totalFunnelSites} funnel sites · {data.pipeline.totalBlogPosts} blog posts
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── SITE INDEXABILITY GRID ─────────────────────────────────────── */}
+      <motion.div
+        {...fadeUp} transition={{ delay: 0.2 }}
+        className="rounded-xl p-5 border mb-6"
+        style={{ background: C.card, borderColor: C.border }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Layers size={16} style={{ color: C.gold }} />
+          <div className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Multi-Site Indexability</div>
+          <div className="text-[10px] ml-auto" style={{ color: C.textMute }}>{data.siteIndexability.length} sites tracked</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {data.siteIndexability.map((site) => {
+            const accent = SITE_ACCENT[site.id] || C.gold;
+            const status = site.postCount > 0 ? "live" : "down";
+            const score = site.postCount > 0 ? 100 : 0;
+            return (
+              <a
+                key={site.id}
+                href={site.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-4 border transition-all hover:scale-[1.01]"
+                style={{ background: C.bgMid, borderColor: C.border }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-semibold truncate" style={{ color: C.text }}>{site.name}</div>
+                    <div className="text-[10px] font-mono truncate mt-0.5" style={{ color: C.text3 }}>{site.url.replace("https://", "")}</div>
+                  </div>
                   <div
-                    key={i}
-                    className="flex items-center gap-3 p-2 rounded-lg"
-                    style={{ background: "var(--bg-mid)" }}
+                    className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                    style={{
+                      background: `${status === "live" ? C.emerald : "#ef4444"}1a`,
+                      color: status === "live" ? C.emerald : "#ef4444",
+                      border: `1px solid ${status === "live" ? C.emerald : "#ef4444"}40`,
+                    }}
                   >
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        background:
-                          d.status === "ok"
-                            ? "var(--emerald)"
-                            : d.status === "running"
-                              ? "var(--gold)"
-                              : "var(--plum)",
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12px] font-medium truncate" style={{ color: "var(--cream)" }}>
-                        {d.siteName}
-                      </div>
-                      <div className="text-[10px]" style={{ color: "var(--cream-mute)" }}>
-                        {d.liveSlug || "—"} · {d.status}
-                      </div>
+                    {status}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: C.textMute }}>Posts</div>
+                    <div className="text-[16px] font-bold tabular-nums" style={{ color: accent }}>
+                      {site.postCount}
                     </div>
-                    {d.netlifyUrl && (
-                      <a
-                        href={d.netlifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] flex-shrink-0 hover:underline"
-                        style={{ color: "var(--gold)" }}
-                      >
-                        Preview →
-                      </a>
+                  </div>
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: C.textMute }}>Last Publish</div>
+                    <div className="text-[10px] font-mono" style={{ color: C.text2 }}>
+                      {formatDate(site.lastPublish)}
+                    </div>
+                    {site.daysSincePublish !== null && (
+                      <div className="text-[9px]" style={{ color: C.text3 }}>
+                        {site.daysSincePublish}d ago
+                      </div>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              </a>
+            );
+          })}
         </div>
-      </motion.section>
+      </motion.div>
 
-      {/* Indexed Pages List */}
-      {(data.main_page_list || []).length > 0 && (
-        <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.35 }}>
-          <div
-            className="rounded-xl p-5 border"
-            style={{ background: "var(--bg-card)", borderColor: "var(--line-soft)" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <FileCode size={16} style={{ color: "var(--gold)" }} />
-              <h3 className="text-[14px] font-semibold" style={{ color: "var(--cream)" }}>
-                Indexed Pages on Primary Site
-              </h3>
+      {/* ── KEYWORD CLUSTERS + VELOCITY ──────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Keyword clusters table */}
+        <motion.div
+          {...fadeUp} transition={{ delay: 0.25 }}
+          className="lg:col-span-2 rounded-xl p-5 border"
+          style={{ background: C.card, borderColor: C.border }}
+        >
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <HashIcon size={16} style={{ color: C.gold }} />
+              <div className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Keyword Clusters</div>
+              <div className="text-[10px]" style={{ color: C.textMute }}>{filteredKeywords.length}/{data.keywords.length}</div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {(data.main_page_list || []).map((page: string, i: number) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-                  style={{ background: "var(--bg-mid)" }}
-                >
-                  <FileCode size={11} style={{ color: "var(--cream-mute)" }} />
-                  <code
-                    className="text-[11px]"
+            <div className="flex items-center gap-2">
+              {/* Filter pills */}
+              <div className="flex items-center gap-1 rounded-md p-0.5" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+                {(["all", "brand", "commercial"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className="px-2.5 py-1 rounded text-[10px] font-medium uppercase tracking-wider"
                     style={{
-                      color: "var(--gold)",
-                      fontFamily: "'JetBrains Mono', monospace",
+                      background: filter === f ? `${C.gold}1a` : "transparent",
+                      color: filter === f ? C.gold : C.text3,
                     }}
                   >
-                    {page}
-                  </code>
-                </div>
-              ))}
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="text-[10px] px-2 py-1 rounded-md uppercase tracking-wider"
+                style={{ background: C.bgMid, color: C.text2, border: `1px solid ${C.border}` }}
+              >
+                <option value="volume">Vol ↓</option>
+                <option value="difficulty">Diff ↑</option>
+                <option value="keyword">A-Z</option>
+              </select>
             </div>
           </div>
-        </motion.section>
-      )}
+          <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+            {filteredKeywords.map((kw) => {
+              const intentColor = INTENT_COLORS[kw.intent] || C.text3;
+              return (
+                <div
+                  key={kw.keyword}
+                  className="rounded-md p-2.5 border flex items-center gap-3"
+                  style={{ background: C.bgMid, borderColor: C.border }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="text-[12px] font-medium truncate" style={{ color: C.text }}>{kw.keyword}</div>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                        style={{ background: `${intentColor}1a`, color: intentColor, border: `1px solid ${intentColor}40` }}
+                      >
+                        {kw.intent}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <DifficultyMeter difficulty={kw.difficulty} />
+                      <div className="text-[9px] flex items-center gap-1" style={{ color: C.text3 }}>
+                        {kw.assignedSites.slice(0, 2).map((s) => (
+                          <span
+                            key={s.id}
+                            className="px-1.5 py-0.5 rounded font-mono"
+                            style={{
+                              background: `${SITE_ACCENT[s.id] || C.text3}1a`,
+                              color: SITE_ACCENT[s.id] || C.text3,
+                              border: `1px solid ${SITE_ACCENT[s.id] || C.text3}40`,
+                            }}
+                          >
+                            {s.id.replace("rodgersintelligence", "rig-main")}
+                          </span>
+                        ))}
+                        {kw.assignedSites.length > 2 && (
+                          <span style={{ color: C.textMute }}>+{kw.assignedSites.length - 2}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[16px] font-bold tabular-nums" style={{ color: C.gold }}>
+                      {formatNumber(kw.volume)}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider" style={{ color: C.textMute }}>vol/mo</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
 
-      {/* Footer timestamp */}
-      <div className="text-[10px] text-center pt-4 pb-8" style={{ color: "var(--cream-mute)" }}>
-        Data generated at {data.generated_at ? new Date(data.generated_at).toLocaleString() : "—"}
+        {/* Velocity + history stack */}
+        <div className="space-y-4">
+          <motion.div
+            {...fadeUp} transition={{ delay: 0.3 }}
+            className="rounded-xl p-5 border"
+            style={{ background: C.card, borderColor: C.border }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <LineChart size={16} style={{ color: C.gold }} />
+              <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Content Velocity</div>
+            </div>
+            <VelocityBar weeks={data.velocity} />
+            <div className="mt-3 text-[10px] text-center" style={{ color: C.textMute }}>
+              Posts published · last 4 weeks
+            </div>
+          </motion.div>
+
+          <motion.div
+            {...fadeUp} transition={{ delay: 0.35 }}
+            className="rounded-xl p-5 border"
+            style={{ background: C.card, borderColor: C.border }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen size={16} style={{ color: C.gold }} />
+              <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Pipeline Funnels</div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2.5 rounded-md" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+                <div className="text-[11px]" style={{ color: C.text2 }}>Funnel Sites</div>
+                <div className="text-[14px] font-bold tabular-nums" style={{ color: C.gold }}>
+                  {data.pipeline.totalFunnelSites}
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-md" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+                <div className="text-[11px]" style={{ color: C.text2 }}>Blog Posts</div>
+                <div className="text-[14px] font-bold tabular-nums" style={{ color: C.goldSoft }}>
+                  {data.pipeline.totalBlogPosts}
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-md" style={{ background: C.bgMid, border: `1px solid ${C.border}` }}>
+                <div className="text-[11px]" style={{ color: C.text2 }}>Total Funnel Pages</div>
+                <div className="text-[14px] font-bold tabular-nums" style={{ color: C.emerald }}>
+                  {formatNumber(data.pipeline.totalFunnelPages)}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            {...fadeUp} transition={{ delay: 0.4 }}
+            className="rounded-xl p-5 border"
+            style={{ background: C.card, borderColor: C.border }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Target size={16} style={{ color: C.gold }} />
+              <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: C.text }}>Actions</div>
+            </div>
+            <div className="space-y-2">
+              <a
+                href="/seo"
+                className="flex items-center justify-between p-2.5 rounded-md transition-colors"
+                style={{ background: `${C.gold}1a`, border: `1px solid ${C.gold}40` }}
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} style={{ color: C.gold }} />
+                  <div className="text-[11px] font-medium" style={{ color: C.gold }}>SEO Generator</div>
+                </div>
+                <ChevronRight size={12} style={{ color: C.gold }} />
+              </a>
+              <a
+                href="/seo-guide"
+                className="flex items-center justify-between p-2.5 rounded-md"
+                style={{ background: C.bgMid, border: `1px solid ${C.border}` }}
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen size={12} style={{ color: C.text2 }} />
+                  <div className="text-[11px] font-medium" style={{ color: C.text2 }}>SEO Guide</div>
+                </div>
+                <ChevronRight size={12} style={{ color: C.text3 }} />
+              </a>
+            </div>
+          </motion.div>
+        </div>
       </div>
+
+      {/* ── DOCTRINE FOOTER ──────────────────────────────────────────── */}
+      <motion.div
+        {...fadeUp} transition={{ delay: 0.5 }}
+        className="mt-6 pt-4 border-t flex items-center justify-between text-[10px]"
+        style={{ borderColor: C.border, color: C.textMute }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-mono">RIG-OS / SEO-COMMAND</span>
+          <span>·</span>
+          <span>coordinate L2-D2-A2-S</span>
+          <span>·</span>
+          <span>50-loop #47 research-studio</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Sparkles size={10} />
+          <span>Multi-site search presence is a compounding edge</span>
+        </div>
+      </motion.div>
     </div>
   );
 }

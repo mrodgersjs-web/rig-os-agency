@@ -76,8 +76,10 @@ export async function GET() {
   const pageCount = countPages();
   const latencyMs = Date.now() - startMs;
 
-  return NextResponse.json({
-    status: "ok",
+  const buildStatus = pageCount > 0 ? "ok" : "degraded";
+  const overallOk = dbStatus === "ok" && buildStatus === "ok";
+  const body = {
+    status: overallOk ? "ok" : "degraded",
     app: "RIG OS Agency",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
@@ -88,7 +90,7 @@ export async function GET() {
     checks: {
       database: dbStatus,
       server: "ok",
-      build_artifacts: pageCount > 0 ? "ok" : "degraded",
+      build_artifacts: buildStatus,
     },
     counts: {
       clients: clientCount,
@@ -101,5 +103,9 @@ export async function GET() {
     },
     design_system: "Midnight Aubergine",
     doctrine: "ProofPacket or it didn't happen",
-  });
+  };
+
+  // Cron-friendly: return non-200 when degraded so monitoring scripts
+  // can `curl -f` and catch outages instead of silently archiving HTML.
+  return NextResponse.json(body, { status: overallOk ? 200 : 503 });
 }
