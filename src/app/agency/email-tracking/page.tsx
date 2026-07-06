@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, MailOpen, Inbox as InboxIcon, AlertCircle, Clock, CheckCircle2,
   CircleDot, Search, Filter, ChevronRight, Reply, Send, Sparkles,
   TrendingUp, Users, Briefcase, Handshake, User, Zap, RefreshCw,
-  ShieldAlert, Eye, MousePointerClick,
+  ShieldAlert, Eye, MousePointerClick, Loader2, X,
 } from "lucide-react";
 
 const C = {
@@ -88,6 +88,9 @@ export default function EmailTrackingPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Email | null>(null);
   const [showReplied, setShowReplied] = useState(false);
+  const [actionRunning, setActionRunning] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [draftOpen, setDraftOpen] = useState<{ email: Email; body: string; loading: boolean; sent: boolean } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +111,87 @@ export default function EmailTrackingPage() {
   }, [selected]);
 
   useEffect(() => { load(); }, []);
+
+  const showToast = useCallback((kind: "ok" | "err", text: string) => {
+    setActionToast({ kind, text });
+    window.setTimeout(() => setActionToast(null), 3500);
+  }, []);
+
+  const callAction = useCallback(async (email: Email, action: string, payload: Record<string, any> = {}) => {
+    const key = `${email.id}:${action}`;
+    setActionRunning(key);
+    try {
+      const r = await fetch("/api/email/action", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action, emailId: email.id, payload }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error || "action_failed");
+      return j;
+    } catch (e: any) {
+      showToast("err", `${action} failed: ${String(e?.message || e)}`);
+      throw e;
+    } finally {
+      setActionRunning(null);
+    }
+  }, [showToast]);
+
+  const openDraftReply = useCallback(async (email: Email) => {
+    setDraftOpen({ email, body: "", loading: true, sent: false });
+    try {
+      const j = await callAction(email, "reply", {
+        category: email.category,
+        subject: email.subject,
+        fromName: email.fromName,
+      });
+      setDraftOpen({ email, body: j.draftBody || "", loading: false, sent: false });
+    } catch {
+      setDraftOpen(null);
+    }
+  }, [callAction]);
+
+  const sendDraft = useCallback(async () => {
+    if (!draftOpen) return;
+    setDraftOpen((d) => d ? { ...d, loading: true } : d);
+    try {
+      await callAction(draftOpen.email, "send", { draftBody: draftOpen.body });
+      // mark replied locally
+      setData((prev) => {
+        if (!prev) return prev;
+        const emails = prev.emails.map((e) => e.id === draftOpen.email.id ? { ...e, hasReply: true, replyStatus: "sent" as const, repliedAt: new Date().toISOString() } : e);
+        const needsReply = emails.filter((e) => e.replyStatus === "none" && e.category !== "internal").length;
+        return { ...prev, emails, summary: { ...prev.summary, needsReply } };
+      });
+      setDraftOpen((d) => d ? { ...d, loading: false, sent: true } : d);
+      showToast("ok", `Reply sent to ${draftOpen.email.fromName}`);
+      window.setTimeout(() => setDraftOpen(null), 1400);
+    } catch {
+      setDraftOpen((d) => d ? { ...d, loading: false } : d);
+    }
+  }, [draftOpen, callAction, showToast]);
+
+  const handlePriority = useCallback(async (email: Email, priority: "high" | "urgent") => {
+    try {
+      await callAction(email, "priority", { priority });
+      showToast("ok", `${email.fromName} marked ${priority}`);
+    } catch {/* surfaced via toast */}
+  }, [callAction, showToast]);
+
+  const handleAssign = useCallback(async (email: Email, department: string) => {
+    try {
+      await callAction(email, "assign", { department });
+      showToast("ok", `${email.fromName} → ${department}`);
+    } catch {/* surfaced */}
+  }, [callAction, showToast]);
+
+  const handleSnooze = useCallback(async (email: Email, hours: number) => {
+    const until = new Date(Date.now() + hours * 3600_000).toISOString();
+    try {
+      await callAction(email, "snooze", { until });
+      showToast("ok", `${email.fromName} snoozed ${hours}h`);
+    } catch {/* surfaced */}
+  }, [callAction, showToast]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -360,7 +444,15 @@ export default function EmailTrackingPage() {
           className="rounded-lg p-5 sticky top-4 self-start"
           style={{ background: C.card, border: `1px solid ${C.border}` }}>
           {selected ? (
-            <DetailPanel email={selected} onClear={() => setSelected(null)} />
+            <DetailPanel
+              email={selected}
+              onClear={() => setSelected(null)}
+              onDraftReply={openDraftReply}
+              onPriority={handlePriority}
+              onAssign={handleAssign}
+              onSnooze={handleSnooze}
+              runningKey={actionRunning}
+            />
           ) : (
             <div className="text-center py-12" style={{ color: C.mute }}>
               <Mail size={28} style={{ color: C.mute, margin: "0 auto 8px" }} />
@@ -375,17 +467,59 @@ export default function EmailTrackingPage() {
         className="text-[10px] flex items-center justify-between pt-3"
         style={{ color: C.mute, borderTop: `1px solid ${C.borderSoft}` }}>
         <span>
-          Source: <code style={{ color: C.text3 }}>GET /api/email/inbox</code> · returns simulated inbox ready for live backend wiring
+          Source: <code style={{ color: C.text3 }}>GET /api/email/inbox</code> · actions: <code style={{ color: C.text3 }}>POST /api/email/action</code>
         </span>
         <span style={{ color: C.gold }}>ProofPacket or it didn't happen</span>
       </motion.div>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {actionToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-4 right-4 z-40 rounded-md px-3 py-2 text-[12px] font-medium shadow-lg flex items-center gap-2"
+            style={{
+              background: actionToast.kind === "ok" ? C.emeraldBg : "#3a1620",
+              color: actionToast.kind === "ok" ? C.emerald : C.red,
+              border: `1px solid ${actionToast.kind === "ok" ? C.emerald : C.red}`,
+            }}>
+            {actionToast.kind === "ok" ? <CheckCircle2 size={12} /> : <ShieldAlert size={12} />}
+            {actionToast.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Draft Reply Modal */}
+      <AnimatePresence>
+        {draftOpen && (
+          <DraftReplyModal
+            draft={draftOpen}
+            onClose={() => setDraftOpen(null)}
+            onChange={(v) => setDraftOpen((d) => d ? { ...d, body: v } : d)}
+            onSend={sendDraft}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function DetailPanel({ email, onClear }: { email: Email; onClear: () => void }) {
+function DetailPanel({ email, onClear, onDraftReply, onPriority, onAssign, onSnooze, runningKey }: {
+  email: Email;
+  onClear: () => void;
+  onDraftReply: (e: Email) => void;
+  onPriority: (e: Email, p: "high" | "urgent") => void;
+  onAssign: (e: Email, d: string) => void;
+  onSnooze: (e: Email, h: number) => void;
+  runningKey: string | null;
+}) {
   const meta = CATEGORY_META[email.category] || CATEGORY_META.personal;
   const Ic = meta.icon;
+  const isRunning = (k: string) => runningKey === `${email.id}:${k}`;
+  const [showPriority, setShowPriority] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [showSnooze, setShowSnooze] = useState(false);
 
   return (
     <div>
@@ -452,26 +586,175 @@ function DetailPanel({ email, onClear }: { email: Email; onClear: () => void }) 
         </div>
       </div>
 
-      {/* Action footer */}
+      {/* Action footer — wired to /api/email/action */}
       <div className="flex flex-wrap gap-2">
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold"
+        <button
+          onClick={() => onDraftReply(email)}
+          disabled={isRunning("reply") || isRunning("send")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold disabled:opacity-60"
           style={{ background: C.gold, color: "#0d0408" }}>
-          <Send size={12} /> Draft Reply
+          {isRunning("reply") ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+          {email.hasReply ? "Re-Draft Reply" : "Draft Reply"}
         </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium"
-          style={{ background: C.card, color: C.text2, border: `1px solid ${C.border}` }}>
-          <Zap size={12} style={{ color: C.gold }} /> Mark Priority
-        </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium"
-          style={{ background: C.card, color: C.text2, border: `1px solid ${C.border}` }}>
-          <Users size={12} style={{ color: C.blue }} /> Assign to Dept
-        </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium ml-auto"
-          style={{ background: C.hover, color: C.text3 }}>
-          Snooze
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => { setShowPriority((s) => !s); setShowAssign(false); setShowSnooze(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium"
+            style={{ background: C.card, color: C.text2, border: `1px solid ${C.border}` }}>
+            <Zap size={12} style={{ color: C.gold }} /> Priority ▾
+          </button>
+          {showPriority && (
+            <div className="absolute z-10 mt-1 left-0 rounded-md p-1 shadow-lg"
+              style={{ background: C.card, border: `1px solid ${C.border}`, minWidth: 140 }}>
+              {(["high", "urgent"] as const).map((p) => (
+                <button
+                  key={p}
+                  disabled={isRunning("priority")}
+                  onClick={async () => { setShowPriority(false); await onPriority(email, p); }}
+                  className="w-full text-left px-2 py-1 rounded text-[12px] hover:opacity-80"
+                  style={{ color: p === "urgent" ? C.red : C.gold }}>
+                  {p === "urgent" ? "🚨 Urgent" : "⚡ High"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => { setShowAssign((s) => !s); setShowPriority(false); setShowSnooze(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium"
+            style={{ background: C.card, color: C.text2, border: `1px solid ${C.border}` }}>
+            <Users size={12} style={{ color: C.blue }} /> Assign ▾
+          </button>
+          {showAssign && (
+            <div className="absolute z-10 mt-1 left-0 rounded-md p-1 shadow-lg"
+              style={{ background: C.card, border: `1px solid ${C.border}`, minWidth: 170 }}>
+              {["sales", "engineering", "client-success", "marketing", "finance", "legal", "operations"].map((d) => (
+                <button
+                  key={d}
+                  disabled={isRunning("assign")}
+                  onClick={async () => { setShowAssign(false); await onAssign(email, d); }}
+                  className="w-full text-left px-2 py-1 rounded text-[12px] hover:opacity-80"
+                  style={{ color: C.text2 }}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative ml-auto">
+          <button
+            onClick={() => { setShowSnooze((s) => !s); setShowPriority(false); setShowAssign(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium"
+            style={{ background: C.hover, color: C.text3 }}>
+            Snooze ▾
+          </button>
+          {showSnooze && (
+            <div className="absolute z-10 mt-1 right-0 rounded-md p-1 shadow-lg"
+              style={{ background: C.card, border: `1px solid ${C.border}`, minWidth: 130 }}>
+              {[
+                { h: 1, label: "1 hour" },
+                { h: 4, label: "4 hours" },
+                { h: 24, label: "Tomorrow" },
+                { h: 72, label: "3 days" },
+              ].map((s) => (
+                <button
+                  key={s.h}
+                  disabled={isRunning("snooze")}
+                  onClick={async () => { setShowSnooze(false); await onSnooze(email, s.h); }}
+                  className="w-full text-left px-2 py-1 rounded text-[12px] hover:opacity-80"
+                  style={{ color: C.text2 }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function DraftReplyModal({ draft, onClose, onChange, onSend }: {
+  draft: { email: Email; body: string; loading: boolean; sent: boolean };
+  onClose: () => void;
+  onChange: (v: string) => void;
+  onSend: () => void;
+}) {
+  const meta = CATEGORY_META[draft.email.category] || CATEGORY_META.personal;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 grid place-items-center p-4"
+      style={{ background: "rgba(8, 4, 14, 0.7)" }}
+      onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        className="rounded-lg p-5 w-full max-w-2xl"
+        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Send size={16} style={{ color: C.gold }} />
+              <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: C.mute, fontWeight: 600 }}>
+                Draft Reply · {meta.label}
+              </span>
+            </div>
+            <div className="text-[14px]" style={{ color: C.text2 }}>
+              To <span style={{ color: C.text, fontWeight: 600 }}>{draft.email.fromName}</span> &lt;{draft.email.from}&gt;
+            </div>
+            <div className="text-[12px] mt-0.5" style={{ color: C.text3 }}>
+              Re: {draft.email.subject}
+            </div>
+          </div>
+          <button onClick={onClose} className="grid place-items-center w-7 h-7 rounded-md" style={{ color: C.mute, background: C.hover }}>
+            <X size={14} />
+          </button>
+        </div>
+        {draft.loading && draft.body === "" ? (
+          <div className="rounded-md p-6 text-center text-[13px] flex items-center justify-center gap-2"
+            style={{ background: "var(--rig-bg)", color: C.mute, border: `1px solid ${C.borderSoft}` }}>
+            <Loader2 size={14} className="animate-spin" /> Drafting reply via /api/email/action …
+          </div>
+        ) : (
+          <textarea
+            value={draft.body}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={draft.sent || draft.loading}
+            rows={14}
+            className="w-full rounded-md p-3 text-[13px] leading-relaxed outline-none resize-none font-mono"
+            style={{
+              background: "var(--rig-bg)", color: C.text, border: `1px solid ${C.borderSoft}`,
+              fontFamily: "Manrope",
+            }}
+          />
+        )}
+        <div className="flex items-center justify-between mt-4 gap-3">
+          <span className="text-[10px]" style={{ color: C.mute }}>
+            {draft.sent
+              ? "✓ Sent · reply recorded in audit log"
+              : `${draft.body.length} chars · POST /api/email/action · action=send`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="px-3 py-1.5 rounded-md text-[12px]"
+              style={{ background: C.hover, color: C.text2 }}>
+              Cancel
+            </button>
+            <button
+              onClick={onSend}
+              disabled={draft.sent || draft.loading || draft.body.trim().length < 5}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-[12px] font-semibold disabled:opacity-60"
+              style={{ background: draft.sent ? C.emerald : C.gold, color: "#0d0408" }}>
+              {draft.loading ? <Loader2 size={12} className="animate-spin" /> :
+                draft.sent ? <CheckCircle2 size={12} /> : <Send size={12} />}
+              {draft.sent ? "Sent" : draft.loading ? "Sending…" : "Send Reply"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
