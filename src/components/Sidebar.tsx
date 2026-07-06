@@ -73,6 +73,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/rig-linkedin", label: "LinkedIn", icon: Users },
       { href: "/rig-instagram", label: "Instagram", icon: Camera },
       { href: "/agency/outreach", label: "Outreach", icon: Mail },
+      { href: "/agency/outreach-live", label: "Outreach Live", icon: MailOpen, accent: "var(--emerald)" },
       { href: "/agency/email-tracking", label: "Email Tracking", icon: MailOpen },
       { href: "/agency/seo", label: "SEO", icon: TrendingUp },
       { href: "/scraping", label: "Scraping", icon: Search },
