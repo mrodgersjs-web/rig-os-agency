@@ -107,6 +107,20 @@ const NAV: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Mission Control",
+    items: [
+      { href: "/stripe", label: "Revenue (Stripe)", icon: CreditCard },
+      { href: "/pipeline", label: "Build Pipeline", icon: Rocket },
+      { href: "/kanban", label: "Kanban", icon: LayoutGrid },
+      { href: "/goals", label: "Goals", icon: Target },
+      { href: "/ruflo", label: "Swarm (Ruflo)", icon: Zap },
+      { href: "/studio", label: "Media Studio", icon: Camera },
+      { href: "/journal", label: "Journal", icon: BookOpen },
+      { href: "/notebook", label: "Notebook", icon: BookOpen },
+      { href: "/network", label: "Network", icon: Activity },
+    ],
+  },
+  {
     label: "System",
     items: [
       { href: "/system-status", label: "System Status", icon: Activity },
