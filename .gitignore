@@ -9,3 +9,4 @@ desktop/node_modules/
 *.app/Contents/Frameworks/
 *.app/Contents/Resources/app.asar
 .env.local
+.data/

@@ -10,7 +10,7 @@ import {
   Zap, BookOpen, Camera, Settings,
   Receipt, CreditCard, AlertCircle, ArrowRightLeft,
   CheckCircle2, Clock, Inbox, Calendar,
-  Target, FolderOpen, Activity, Smartphone,
+  Target, FolderOpen, Activity, Smartphone, Database,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -63,6 +63,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/agency/contracts", label: "Contracts", icon: FileText },
       { href: "/agency/invoices", label: "Invoices", icon: Receipt },
       { href: "/agency/transformfit", label: "TransformFit", icon: Smartphone },
+      { href: "/agency/seed", label: "Seed Control", icon: Database },
     ],
   },
   {
@@ -108,6 +109,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "System",
     items: [
+      { href: "/system-status", label: "System Status", icon: Activity },
       { href: "/rig-app", label: "Engineering", icon: Code },
       { href: "/rig-design", label: "Design", icon: Code },
       { href: "/rig-doctrine", label: "Doctrine", icon: Shield },

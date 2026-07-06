@@ -113,11 +113,23 @@ function readRaw(filename: string): any | undefined {
 interface T2<T> { clients?: T[]; deals?: PipelineDeal[]; proposals?: Proposal[] | any[]; contracts?: Contract[]; invoices?: Invoice[]; [k: string]: any; updatedAt: string }
 
 function getArray(data: T2<any>, key: "clients"|"deals"|"contracts"|"invoices"|string): any[] {
-  const d = data[key]; if (d) return Array.isArray(d) ? d : (typeof d === "object" && "data" in d ? d.data : [d]);
+  // Try the keyed collection first (legacy multi-collection format), then fall
+  // back to the single-collection wrapper `{ data: [...], updatedAt }` format
+  // produced by `writeArray`. This lets seed routes and CRUD endpoints both
+  // populate the same store without losing data.
+  const named = data[key];
+  if (named) {
+    if (Array.isArray(named)) return named;
+    if (typeof named === "object" && "data" in named && Array.isArray((named as any).data)) {
+      return (named as any).data as any[];
+    }
+    return [named];
+  }
+  if (Array.isArray((data as any).data)) return (data as any).data as any[];
   return [];
 }
 
-function getAll<T extends keyof T2<any>>(key: T): any[] | undefined {
+function getAll(key: string): any[] | undefined {
   const raw = readRaw(key + ".json"); if (!raw) return undefined;
   if (Array.isArray(raw)) return raw as any[];
   return getArray(raw, key);
