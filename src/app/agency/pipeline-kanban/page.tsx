@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Workflow, DollarSign, Users, TrendingUp, Plus, X, ChevronRight, ChevronLeft, Trash2, Target } from "lucide-react";
+import { Workflow, DollarSign, Users, TrendingUp, Plus, X, ChevronRight, ChevronLeft, Trash2, Target, Clock, AlertTriangle, GripVertical } from "lucide-react";
 
 const STAGES = ["discovery", "qualified", "proposal", "negotiation", "closed"] as const;
 type Stage = (typeof STAGES)[number];
@@ -25,6 +25,7 @@ interface Deal {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  stageEnteredAt?: string; // when deal entered current stage (for aging)
 }
 
 interface Summary {
@@ -40,13 +41,22 @@ export default function PipelineKanbanPage() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [hoverStage, setHoverStage] = useState<Stage | null>(null);
 
   const loadData = useCallback(async () => {
     try {
       const res = await fetch("/api/agency/pipeline-deals?action=list");
       if (!res.ok) throw new Error("fetch failed");
       const data = await res.json();
-      setDeals(data.deals || []);
+      // backfill stageEnteredAt for any deal that doesn't have one
+      const raw: Deal[] = data.deals || [];
+      const now = new Date().toISOString();
+      const backfilled = raw.map((d) => ({
+        ...d,
+        stageEnteredAt: d.stageEnteredAt || d.updatedAt || now,
+      }));
+      setDeals(backfilled);
       setSummary({ count: data.count, totalValue: data.totalValue, closedValue: data.closedValue, weightedValue: data.weightedValue });
     } catch {
       // fallback
@@ -61,10 +71,21 @@ export default function PipelineKanbanPage() {
     const idx = STAGES.indexOf(deal.stage);
     const next = STAGES[Math.min(STAGES.length - 1, Math.max(0, idx + dir))];
     if (next === deal.stage) return;
-    setDeals((prev) => prev.map((d) => (d.id === deal.id ? { ...d, stage: next } : d)));
+    const now = new Date().toISOString();
+    setDeals((prev) => prev.map((d) => (d.id === deal.id ? { ...d, stage: next, stageEnteredAt: now, updatedAt: now } : d)));
     await fetch("/api/agency/pipeline-deals", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "move", id: deal.id, stage: next }),
+    });
+  };
+
+  const moveToStage = async (deal: Deal, target: Stage) => {
+    if (target === deal.stage) return;
+    const now = new Date().toISOString();
+    setDeals((prev) => prev.map((d) => (d.id === deal.id ? { ...d, stage: target, stageEnteredAt: now, updatedAt: now } : d)));
+    await fetch("/api/agency/pipeline-deals", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "move", id: deal.id, stage: target }),
     });
   };
 
@@ -85,10 +106,63 @@ export default function PipelineKanbanPage() {
     if (res.ok) { setShowAdd(false); loadData(); }
   };
 
+  // ── HTML5 drag-and-drop wiring ──────────────────────────────────────────
+  const onDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, dealId: string) => {
+    setDraggingId(dealId);
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", dealId); } catch { /* ignore */ }
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    setDraggingId(null);
+    setHoverStage(null);
+  }, []);
+
+  const onColumnDragOver = useCallback((e: React.DragEvent<HTMLDivElement>, stage: Stage) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (hoverStage !== stage) setHoverStage(stage);
+  }, [hoverStage]);
+
+  const onColumnDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>, stage: Stage) => {
+    // only clear if we actually left the column
+    if (e.currentTarget === e.target) setHoverStage((h) => (h === stage ? null : h));
+  }, []);
+
+  const onColumnDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>, stage: Stage) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain") || draggingId;
+    if (!id) return;
+    const deal = deals.find((d) => d.id === id);
+    if (deal && deal.stage !== stage) {
+      await moveToStage(deal, stage);
+    }
+    setDraggingId(null);
+    setHoverStage(null);
+  }, [deals, draggingId, moveToStage]);
+
   const grouped = STAGES.reduce((acc, stage) => {
     acc[stage] = deals.filter((d) => d.stage === stage);
     return acc;
   }, {} as Record<Stage, Deal[]>);
+
+  // Stage aging stats — average days in stage per column (excluding closed)
+  const stageAging = useMemo(() => {
+    const stats: Record<Stage, { count: number; avgDays: number; oldest: number; staleCount: number }> = {} as any;
+    STAGES.forEach((s) => {
+      const arr = grouped[s] || [];
+      const ages = arr.map((d) => {
+        const ts = d.stageEnteredAt || d.updatedAt || d.createdAt;
+        return (Date.now() - new Date(ts).getTime()) / 86_400_000;
+      });
+      const total = ages.reduce((a, b) => a + b, 0);
+      const oldest = ages.length ? Math.max(...ages) : 0;
+      const avg = ages.length ? total / ages.length : 0;
+      const stale = ages.filter((a) => a > 14).length;
+      stats[s] = { count: arr.length, avgDays: avg, oldest, staleCount: stale };
+    });
+    return stats;
+  }, [deals, grouped]);
 
   if (loading) {
     return (
@@ -149,12 +223,22 @@ export default function PipelineKanbanPage() {
           const stageDeals = grouped[stage];
           const meta = STAGE_META[stage];
           const stageValue = stageDeals.reduce((s, d) => s + d.dealValue, 0);
+          const aging = stageAging[stage];
+          const isHover = hoverStage === stage;
+          const dropTargetActive = isHover;
 
           return (
             <div
               key={stage}
-              className="flex-shrink-0 w-[290px] rounded-xl p-3"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--line-soft)" }}
+              className="flex-shrink-0 w-[290px] rounded-xl p-3 transition-all"
+              style={{
+                background: dropTargetActive ? `${meta.color}10` : "rgba(255,255,255,0.02)",
+                border: dropTargetActive ? `1px dashed ${meta.color}` : "1px solid var(--line-soft)",
+                minHeight: 380,
+              }}
+              onDragOver={(e) => onColumnDragOver(e, stage)}
+              onDragLeave={(e) => onColumnDragLeave(e, stage)}
+              onDrop={(e) => onColumnDrop(e, stage)}
             >
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
@@ -164,61 +248,120 @@ export default function PipelineKanbanPage() {
                   <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: `${meta.color}20`, color: meta.color }}>
                     {stageDeals.length}
                   </span>
+                  {aging.staleCount > 0 && (
+                    <span
+                      className="text-[9px] inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: "#ef444420", color: "#ef4444" }}
+                      title={`${aging.staleCount} deal${aging.staleCount === 1 ? "" : "s"} stuck > 14 days`}
+                    >
+                      <AlertTriangle size={9} />{aging.staleCount}
+                    </span>
+                  )}
                 </div>
                 <span className="text-[10px]" style={{ color: "var(--cream-mute)" }}>${(stageValue / 1000).toFixed(0)}K</span>
               </div>
 
+              {/* Aging summary line */}
+              {aging.count > 0 && (
+                <div className="text-[10px] mb-2 px-1 flex items-center gap-1.5" style={{ color: "var(--cream-mute)" }}>
+                  <Clock size={9} />
+                  <span>
+                    avg {aging.avgDays.toFixed(1)}d in stage
+                    {aging.oldest > 0 && aging.oldest !== aging.avgDays && (
+                      <> · oldest <span style={{ color: aging.oldest > 14 ? "#ef4444" : "var(--cream-dim)" }}>{aging.oldest.toFixed(0)}d</span></>
+                    )}
+                  </span>
+                </div>
+              )}
+
               {/* Deal cards */}
-              <div className="space-y-2">
+              <div className="space-y-2 min-h-[200px]">
                 <AnimatePresence>
-                  {stageDeals.map((deal) => (
-                    <motion.div
-                      key={deal.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="p-3 rounded-lg cursor-pointer group"
-                      style={{ background: "var(--bg-card)", border: "1px solid var(--line-soft)" }}
-                      onClick={() => setSelectedDeal(deal)}
-                    >
-                      <div className="text-[12px] font-semibold mb-1" style={{ color: "var(--cream)" }}>{deal.clientName}</div>
-                      {deal.contact && (
-                        <div className="text-[10px] mb-1.5" style={{ color: "var(--cream-mute)" }}>{deal.contact}</div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="text-[14px] font-bold" style={{ color: meta.color }}>${(deal.dealValue / 1000).toFixed(0)}K</div>
-                        {deal.source && (
-                          <div className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--line-soft)", color: "var(--cream-mute)" }}>
-                            {deal.source}
+                  {stageDeals.map((deal) => {
+                    const ageDays = (Date.now() - new Date(deal.stageEnteredAt || deal.updatedAt || deal.createdAt).getTime()) / 86_400_000;
+                    const isStale = ageDays > 14;
+                    const isDragging = draggingId === deal.id;
+                    return (
+                      <motion.div
+                        key={deal.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: isDragging ? 0.4 : 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        draggable
+                        onDragStart={(e) => onDragStart(e as unknown as React.DragEvent<HTMLDivElement>, deal.id)}
+                        onDragEnd={onDragEnd}
+                        className="p-3 rounded-lg cursor-grab active:cursor-grabbing group"
+                        style={{
+                          background: "var(--bg-card)",
+                          border: `1px solid ${isStale ? "#ef444450" : "var(--line-soft)"}`,
+                          boxShadow: isDragging ? `0 0 0 2px ${meta.color}80` : "none",
+                        }}
+                        onClick={() => setSelectedDeal(deal)}
+                      >
+                        <div className="flex items-start gap-1.5">
+                          <GripVertical size={11} className="mt-0.5 opacity-30 group-hover:opacity-70 transition-opacity" style={{ color: "var(--cream-mute)" }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-semibold mb-0.5 truncate" style={{ color: "var(--cream)" }}>{deal.clientName}</div>
+                            {deal.contact && (
+                              <div className="text-[10px] mb-1 truncate" style={{ color: "var(--cream-mute)" }}>{deal.contact}</div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      {/* Move buttons */}
-                      <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); moveStage(deal, -1); }}
-                          disabled={STAGES.indexOf(deal.stage) === 0}
-                          className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
-                          style={{ color: "var(--cream-mute)" }}
-                        >
-                          <ChevronLeft size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); moveStage(deal, 1); }}
-                          disabled={STAGES.indexOf(deal.stage) === STAGES.length - 1}
-                          className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
-                          style={{ color: "var(--cream-mute)" }}
-                        >
-                          <ChevronRight size={13} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="text-[14px] font-bold" style={{ color: meta.color }}>${(deal.dealValue / 1000).toFixed(0)}K</div>
+                          <div className="flex items-center gap-1">
+                            <span
+                              className="text-[9px] inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: isStale ? "#ef444420" : "var(--line-soft)",
+                                color: isStale ? "#ef4444" : "var(--cream-mute)",
+                              }}
+                              title={`In ${meta.label} for ${ageDays.toFixed(1)} days`}
+                            >
+                              <Clock size={8} />{ageDays.toFixed(0)}d
+                            </span>
+                            {deal.source && (
+                              <div className="text-[9px] px-1.5 py-0.5 rounded-full truncate max-w-[90px]" style={{ background: "var(--line-soft)", color: "var(--cream-mute)" }}>
+                                {deal.source}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Move buttons */}
+                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveStage(deal, -1); }}
+                            disabled={STAGES.indexOf(deal.stage) === 0}
+                            className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
+                            style={{ color: "var(--cream-mute)" }}
+                          >
+                            <ChevronLeft size={13} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveStage(deal, 1); }}
+                            disabled={STAGES.indexOf(deal.stage) === STAGES.length - 1}
+                            className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-20"
+                            style={{ color: "var(--cream-mute)" }}
+                          >
+                            <ChevronRight size={13} />
+                          </button>
+                          <span className="flex-1 text-center text-[9px] uppercase tracking-wider" style={{ color: "var(--cream-mute)" }}>
+                            drag to move
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
 
                 {stageDeals.length === 0 && (
-                  <div className="text-center py-8 text-[11px]" style={{ color: "var(--cream-mute)" }}>No deals</div>
+                  <div
+                    className="text-center py-10 text-[11px] rounded-lg border border-dashed"
+                    style={{ color: "var(--cream-mute)", borderColor: isHover ? meta.color : "var(--line-soft)" }}
+                  >
+                    {isHover ? `Drop to move to ${meta.label}` : "No deals · drag here"}
+                  </div>
                 )}
               </div>
             </div>
@@ -243,7 +386,7 @@ export default function PipelineKanbanPage() {
 
 // ── Add Deal Modal ──────────────────────────────────────────────────────────
 function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Partial<Deal>) => void }) {
-  const [form, setForm] = useState({ clientName: "", contact: "", dealValue: "", stage: "discovery", source: "Manual Entry", notes: "" });
+  const [form, setForm] = useState<{ clientName: string; contact: string; dealValue: string; stage: Stage; source: string; notes: string }>({ clientName: "", contact: "", dealValue: "", stage: "discovery", source: "Manual Entry", notes: "" });
 
   return (
     <motion.div
@@ -297,7 +440,7 @@ function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Part
           </Field>
         </div>
         <button
-          onClick={() => onAdd({ ...form, dealValue: Number(form.dealValue) || 0 })}
+          onClick={() => onAdd({ ...form, dealValue: Number(form.dealValue) || 0, stage: form.stage as Stage })}
           disabled={!form.clientName.trim()}
           className="w-full mt-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-30"
           style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
