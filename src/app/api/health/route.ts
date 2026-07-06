@@ -120,6 +120,34 @@ export async function GET() {
     health.checks.ollama = { status: "down", detail: "Ollama not reachable on :11434" };
   }
 
+  // Check 6a: OpenClaw gateway — used by vitals, surfaces here for /system-status
+  try {
+    const ocResp = await execSync("openclaw health 2>/dev/null || echo DOWN", {
+      timeout: 3000,
+      encoding: "utf-8",
+    });
+    const healthy = ocResp.includes("ok") || ocResp.includes("healthy");
+    health.checks.openclaw = {
+      status: healthy ? "ok" : ocResp.trim() === "DOWN" ? "down" : "degraded",
+      detail: ocResp.split("\n")[0].slice(0, 120) || "no output",
+    };
+  } catch {
+    health.checks.openclaw = { status: "degraded", detail: "openclaw CLI not on PATH" };
+  }
+
+  // Check 6b: Disk pressure on root volume — early warning before 90% fills
+  try {
+    const dfOut = execSync("df -k / | tail -1", { timeout: 2000, encoding: "utf-8" });
+    const m = dfOut.trim().split(/\s+/);
+    const usedPct = parseInt(m[4] || "0", 10);
+    health.checks.disk = {
+      status: usedPct >= 90 ? "down" : usedPct >= 75 ? "degraded" : "ok",
+      detail: `root ${usedPct}% used (${m[2]} of ${m[1]} blocks)`,
+    };
+  } catch {
+    health.checks.disk = { status: "unknown" };
+  }
+
   // Check 6: Stripe connectivity
   try {
     const envFile = await fs.readFile(`${home}/.hermes/.env`, "utf-8");
@@ -151,7 +179,7 @@ export async function GET() {
     (health.checks.hermes?.status === "ok");
 
   // Overall status
-  const criticalChecks = ["pm2", "agents", "ollama"];
+  const criticalChecks = ["pm2", "agents", "ollama", "disk"];
   const allOk = criticalChecks.every((k) => {
     const s = health.checks[k]?.status;
     return s === "ok" || s === "degraded";

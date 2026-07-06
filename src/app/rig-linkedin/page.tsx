@@ -94,11 +94,19 @@ export default function LinkedInStudioPage() {
   const kpis = data.kpis || {};
   const agents: Agent[] = data.agents || [];
   const verticals = data.verticals || [];
+  const campaignsData = data.campaigns || { total: 0, list: [] };
+  const campaignList: Array<{ name: string; drafts: number; approved: number; published: number; manifest?: any }> = campaignsData.list || [];
+
+  const [campaignFilter, setCampaignFilter] = useState<string>("all");
 
   // Apply filters
   const filtered = posts.filter((p) => {
     if (filter !== "all" && p.status !== filter) return false;
     if (verticalFilter !== "all" && p.vertical !== verticalFilter) return false;
+    if (campaignFilter !== "all" && !(p.path || "").includes(`/campaigns/${campaignFilter}/`) && !(p.path || "").includes(`/campaigns/${campaignFilter}`)) {
+      // Allow match on campaign name as a path segment
+      if (!(p.path || "").includes(campaignFilter)) return false;
+    }
     if (imageFilter === "with-images" && !p.hasImage) return false;
     if (imageFilter === "without-images" && p.hasImage) return false;
     if (imageFilter === "violations" && p.imageRulesPassed) return false;
@@ -128,7 +136,7 @@ export default function LinkedInStudioPage() {
               Post Manager
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--cream-dim)" }}>
-              {kpis.totalPosts || 0} posts · {agents.length} agents · {verticals.length} verticals · BDF30 scoring · Image enforcement active
+              {kpis.totalPosts || 0} posts · {agents.length} agents · {verticals.length} verticals · {campaignList.length} campaigns · BDF30 scoring · Image enforcement active
             </p>
           </div>
           <button
@@ -153,6 +161,76 @@ export default function LinkedInStudioPage() {
           <KPICard icon={AlertTriangle} label="No Image" value={kpis.postsWithoutImages || 0} color="var(--plum)" />
         </div>
       </motion.section>
+
+      {/* ── Campaigns on Disk (real filesystem scan) ──────────────── */}
+      {campaignList.length > 0 && (
+        <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.075 }}>
+          <div className="flex items-center gap-3 mb-3">
+            <Briefcase size={16} style={{ color: "var(--gold)" }} />
+            <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: "var(--cream-mute)", fontWeight: 600 }}>
+              LinkedIn Campaigns on Disk
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "rgba(212,165,116,0.15)", color: "var(--gold)", fontWeight: 600 }}>
+              {campaignList.length} campaigns · {posts.length} posts scanned
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {campaignList.map((c, idx) => {
+              const total = (c.drafts || 0) + (c.approved || 0) + (c.published || 0);
+              const publishRate = total > 0 ? Math.round((c.published / total) * 100) : 0;
+              const isActive = campaignFilter === c.name;
+              return (
+                <button
+                  key={c.name}
+                  onClick={() => setCampaignFilter(isActive ? "all" : c.name)}
+                  className="text-left rounded-lg p-3 transition cursor-pointer"
+                  style={{
+                    background: isActive ? "rgba(212,165,116,0.12)" : "var(--bg-card)",
+                    border: isActive ? "1px solid var(--gold)" : "1px solid var(--line)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[12px] font-semibold truncate" style={{ color: "var(--cream)", fontFamily: "'Manrope', sans-serif" }}>
+                      {c.name}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: "var(--cream-mute)" }}>
+                      {total}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--cream-mute)" }}>
+                    {c.published > 0 && (
+                      <span style={{ color: "var(--emerald)" }}>● {c.published}</span>
+                    )}
+                    {c.approved > 0 && (
+                      <span style={{ color: "var(--gold)" }}>● {c.approved}</span>
+                    )}
+                    {c.drafts > 0 && (
+                      <span style={{ color: "var(--cream-dim)" }}>● {c.drafts}</span>
+                    )}
+                  </div>
+                  <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-deep)" }}>
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${publishRate}%`,
+                        background: publishRate >= 80 ? "var(--emerald)" : publishRate >= 40 ? "var(--gold)" : "var(--plum)",
+                      }}
+                    />
+                  </div>
+                  <div className="text-[9px] mt-1" style={{ color: "var(--cream-mute)" }}>
+                    {publishRate}% published
+                  </div>
+                  {isActive && (
+                    <div className="mt-2 text-[9px] uppercase tracking-widest" style={{ color: "var(--gold)" }}>
+                      Filtering posts ↓
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+      )}
 
       {/* ── Image Enforcement Banner ───────────────────────────── */}
       <motion.section {...fadeUp} transition={{ duration: 0.4, delay: 0.1 }}>

@@ -110,24 +110,57 @@ function checkImageRules(post: LIPost, mdContent: string): void {
 function scanPosts(dir: string, status: LIPost['status']): LIPost[] {
   const posts: LIPost[] = [];
   if (!existsSync(dir)) return posts;
-  
+
   try {
     const entries = readdirSync(dir);
+    // Pre-scan: build map of base-name -> image-prompt json in sibling images/ dir
+    const imgDir = join(dir, 'images');
+    const promptJsonByBase = new Map<string, string>();
+    if (existsSync(imgDir)) {
+      try {
+        for (const ie of readdirSync(imgDir)) {
+          const m = ie.match(/^(.+)\.prompt\.json$/);
+          if (m) promptJsonByBase.set(m[1], join(imgDir, ie));
+        }
+      } catch {}
+    }
+    // Also scan the parent dir's images/ — for posts in forged/ the assets live in ../../images/
+    const parentImgDir = join(dir, '..', 'images');
+    if (existsSync(parentImgDir) && parentImgDir !== imgDir) {
+      try {
+        for (const ie of readdirSync(parentImgDir)) {
+          const m = ie.match(/^(.+)\.prompt\.json$/);
+          const k = m ? m[1] : null;
+          if (k && !promptJsonByBase.has(k)) promptJsonByBase.set(k, join(parentImgDir, ie));
+        }
+      } catch {}
+    }
+    // And a real-image map (png/jpg) for hasImage flag
+    const realImageByBase = new Map<string, string>();
+    for (const id of [imgDir, parentImgDir]) {
+      if (!existsSync(id)) continue;
+      try {
+        for (const ie of readdirSync(id)) {
+          const m = ie.match(/^(.+)\.(png|jpg|jpeg|webp|svg)$/);
+          if (m) realImageByBase.set(m[1], join(id, ie));
+        }
+      } catch {}
+    }
     for (const entry of entries) {
       const fullPath = join(dir, entry);
       const stat = statSync(fullPath);
-      
+
       if (stat.isDirectory()) continue;
       if (!entry.endsWith('.md') && !entry.endsWith('.markdown')) continue;
-      
+
       const parsed = parseMarkdownPost(fullPath);
       const content = parsed.content;
-      
+
       // Check for adjacent image
       const baseName = entry.replace(/\.(md|markdown)$/, '');
-      const imgDir = join(dir, 'images');
       let imagePath: string | null = null;
-      
+      let imagePromptJson: string | null = null;
+
       // Check for image in same dir or images subfolder
       const imgExts = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
       for (const ext of imgExts) {
@@ -136,13 +169,22 @@ function scanPosts(dir: string, status: LIPost['status']): LIPost[] {
         const imgSubdir = join(imgDir, baseName + ext);
         if (existsSync(imgSubdir)) { imagePath = imgSubdir; break; }
       }
-      
+      // Match a {basename}.prompt.json (image generation recipe)
+      if (promptJsonByBase.has(baseName)) {
+        imagePromptJson = promptJsonByBase.get(baseName)!;
+        if (!imagePath) imagePath = imagePromptJson; // treat prompt-json as image asset
+      }
+      // Prefer a real image file (.png/.jpg) over a prompt.json so the UI gets an actual asset
+      if (realImageByBase.has(baseName)) {
+        imagePath = realImageByBase.get(baseName)!;
+      }
+
       // Check for image refs in content
       const hasImageRef = /!\[.*?\]\(.*?\)/.test(content) || /<img\s/.test(content);
-      
+
       const wordCount = content.split(/\s+/).filter(Boolean).length;
       const preview = content.slice(0, 280).replace(/[#*`>\-]/g, '').trim();
-      
+
       // Try to read BDF score from frontmatter or content
       let bdfScore: number | null = null;
       let antiGenericScore: number | null = null;
@@ -150,15 +192,15 @@ function scanPosts(dir: string, status: LIPost['status']): LIPost[] {
       if (bdfMatch) bdfScore = parseInt(bdfMatch[1]);
       const agMatch = content.match(/anti.?generic[:\s]*(\d+)/i);
       if (agMatch) antiGenericScore = parseInt(agMatch[1]);
-      
+
       const post: LIPost = {
-        id: `${status}-${entry}`,
+        id: `${status}-${entry}-${fullPath}`,
         filename: entry,
         path: fullPath,
         vertical: parsed.vertical,
         title: parsed.title,
         status,
-        hasImage: !!imagePath || hasImageRef,
+        hasImage: !!imagePath || !!imagePromptJson || hasImageRef,
         imagePath,
         bdfScore,
         antiGenericScore,
@@ -169,20 +211,41 @@ function scanPosts(dir: string, status: LIPost['status']): LIPost[] {
         imageRulesPassed: true,
         imageViolations: [],
       };
-      
+
       checkImageRules(post, content);
       posts.push(post);
     }
   } catch {}
-  
+
   return posts;
+}
+
+// ── Discover campaigns directory (real source) ─────────────────────────────
+function getCampaignDirs(root: string): string[] {
+  const camps = join(root, 'campaigns');
+  if (!existsSync(camps)) return [];
+  try {
+    return readdirSync(camps).filter((n) => {
+      try { return statSync(join(camps, n)).isDirectory(); } catch { return false; }
+    }).map((n) => join(camps, n));
+  } catch { return []; }
 }
 
 export async function GET() {
   // ── Real file-system scan of LinkedIn content ───────────────────
   const allPosts: LIPost[] = [];
-  
-  // Scan published posts
+
+  // Discover real LinkedIn campaigns on disk (per-week content)
+  const campaignRoots = [LINKEDIN_STUDIO, STUDIO_REPO, AI_COMPANY];
+  const allCampaignDirs: Array<{ root: string; campaignDir: string; name: string }> = [];
+  for (const root of campaignRoots) {
+    for (const cd of getCampaignDirs(root)) {
+      const name = cd.split('/').pop() || '';
+      allCampaignDirs.push({ root, campaignDir: cd, name });
+    }
+  }
+
+  // Scan published posts (canonical + per-campaign posts_spiced / posts dirs)
   const publishDirs = [
     join(LINKEDIN_STUDIO, 'published'),
     join(LINKEDIN_STUDIO, 'posts', 'published'),
@@ -190,8 +253,13 @@ export async function GET() {
     join(STUDIO_REPO, 'published'),
     join(STUDIO_REPO, 'posts', 'published'),
   ];
+  // per-campaign: posts_spiced/ treated as published, posts/ as published
+  for (const c of allCampaignDirs) {
+    publishDirs.push(join(c.campaignDir, 'posts_spiced'));
+    publishDirs.push(join(c.campaignDir, 'posts'));
+  }
   for (const d of publishDirs) allPosts.push(...scanPosts(d, 'published'));
-  
+
   // Scan queued posts
   const queueDirs = [
     join(LINKEDIN_STUDIO, 'queued'),
@@ -200,32 +268,90 @@ export async function GET() {
     join(STUDIO_REPO, 'posts', 'queued'),
   ];
   for (const d of queueDirs) allPosts.push(...scanPosts(d, 'queued'));
-  
-  // Scan draft posts
+
+  // Scan draft posts (canonical drafts/ + per-campaign drafts/ + follow_up/)
   const draftDirs = [
     join(LINKEDIN_STUDIO, 'drafts'),
     join(LINKEDIN_STUDIO, 'posts', 'drafts'),
     join(LINKEDIN_STUDIO, 'posts'),
     join(STUDIO_REPO, 'drafts'),
     join(STUDIO_REPO, 'posts'),
+    join(LINKEDIN_STUDIO, 'data', 'drafts'),
+    join(STUDIO_REPO, 'data', 'drafts'),
   ];
+  for (const c of allCampaignDirs) {
+    draftDirs.push(join(c.campaignDir, 'drafts'));
+    draftDirs.push(join(c.campaignDir, 'new_posts_draft'));
+  }
   for (const d of draftDirs) allPosts.push(...scanPosts(d, 'draft'));
-  
-  // Scan scheduled/approved
+
+  // Scan scheduled/approved (canonical + per-campaign forged/ treated as approved/queued)
   const approvedDirs = [
     join(LINKEDIN_STUDIO, 'approved'),
     join(LINKEDIN_STUDIO, 'posts', 'approved'),
     join(STUDIO_REPO, 'approved'),
+    join(LINKEDIN_STUDIO, 'scheduled'),
+    join(STUDIO_REPO, 'scheduled'),
   ];
+  for (const c of allCampaignDirs) {
+    approvedDirs.push(join(c.campaignDir, 'forged'));
+    approvedDirs.push(join(c.campaignDir, 'approved'));
+    approvedDirs.push(join(c.campaignDir, 'scheduled'));
+  }
   for (const d of approvedDirs) allPosts.push(...scanPosts(d, 'approved'));
-  
-  // ── Deduplicate by filename ─────────────────────────────────────
+
+  // ── Deduplicate by path (full path is the unique key) ──────────────
   const seen = new Set<string>();
   const deduped = allPosts.filter(p => {
-    if (seen.has(p.filename)) return false;
-    seen.add(p.filename);
+    const key = p.path || p.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+
+  // ── Campaign manifest rollup (aggregated by name across mirrored repos) ──
+  const campAgg = new Map<string, { name: string; drafts: number; approved: number; published: number; manifest?: any; sources: string[] }>();
+  for (const c of allCampaignDirs) {
+    let drafts = 0, approved = 0, published = 0;
+    for (const p of deduped) {
+      if (!p.path.startsWith(c.campaignDir + '/')) continue;
+      if (p.status === 'draft') drafts++;
+      else if (p.status === 'approved' || p.status === 'queued' || p.status === 'scheduled') approved++;
+      else if (p.status === 'published') published++;
+    }
+    let manifest: any = undefined;
+    const manifestPaths = [
+      join(c.campaignDir, 'INDEX.md'),
+      join(c.campaignDir, `${c.name}_manifest.json`),
+      join(c.campaignDir, 'manifest.json'),
+    ];
+    for (const mp of manifestPaths) {
+      if (existsSync(mp)) {
+        try {
+          if (mp.endsWith('.json')) {
+            manifest = JSON.parse(readFileSync(mp, 'utf-8'));
+          } else {
+            manifest = { indexPath: mp, kind: 'INDEX.md' };
+          }
+        } catch {}
+        break;
+      }
+    }
+    // Aggregate by name so the same campaign mirrored across repos shows once
+    const existing = campAgg.get(c.name);
+    if (existing) {
+      existing.drafts += drafts;
+      existing.approved += approved;
+      existing.published += published;
+      existing.sources.push(c.root);
+      if (!existing.manifest && manifest) existing.manifest = manifest;
+    } else {
+      campAgg.set(c.name, { name: c.name, drafts, approved, published, manifest, sources: [c.root] });
+    }
+  }
+  const campaignSummaries = Array.from(campAgg.values()).sort((a, b) =>
+    (b.drafts + b.approved + b.published) - (a.drafts + a.approved + a.published)
+  );
   
   // ── Receipt ledger ──────────────────────────────────────────────
   let receiptCount = 0;
@@ -302,6 +428,10 @@ export async function GET() {
       imageRuleViolations,
       imageComplianceRate: deduped.length > 0 ? Math.round((postsWithImages / deduped.length) * 100) : 0,
       receiptCount,
+    },
+    campaigns: {
+      total: campaignSummaries.length,
+      list: campaignSummaries,
     },
     verticalCounts,
     statusCounts,
