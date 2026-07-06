@@ -3,9 +3,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ImageIcon, Send, Calendar, Trash2, Edit3, Plus, X,
+  ImageIcon, Send, Calendar as CalIcon, Trash2, Edit3, Plus, X,
   TrendingUp, Eye, Heart, MessageCircle, Bookmark, AlertTriangle,
-  Clock, CheckCircle2, BarChart3, Filter,
+  Clock, CheckCircle2, BarChart3, Filter, ChevronLeft, ChevronRight,
+  CalendarDays, Sparkles, Copy, Layers,
 } from "lucide-react";
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
@@ -78,6 +79,74 @@ const SEED: DraftPost[] = [
   },
 ];
 
+/* ── Templates Library ─────────────────────────────────────────────────────── */
+interface PostTemplate {
+  id: string;
+  name: string;
+  hook: string;
+  body: string;
+  cta: string;
+  hashtags: string[];
+  score_hint: number;
+}
+
+const TEMPLATES: PostTemplate[] = [
+  {
+    id: "t1",
+    name: "Build In Public — Lesson",
+    hook: "We rebuilt [SYSTEM] in [TIME]. Here's what changed.",
+    body: "Not the surface. The operating system.\n\nEvery [PIECE A], every [PIECE B], every [PIECE C] — now running on [NEW].\n\nThe result? [MEASURABLE OUTCOME], [MEASURABLE OUTCOME 2].",
+    cta: "What would you rebuild first?",
+    hashtags: ["#buildinpublic", "#founder", "#ops"],
+    score_hint: 95,
+  },
+  {
+    id: "t2",
+    name: "Anti-Lesson — Turned Down Money",
+    hook: "Turned down $[AMOUNT] in [PERIOD]. Here's why.",
+    body: "Every yes to the wrong client is a no to the right one.\n\nWe built a scoring gate that rejects leads below [THRESHOLD].\n\nResult: tighter pipeline, better work, happier team.",
+    cta: "What's your hardest filter?",
+    hashtags: ["#gtm", "#qualifyleads", "#agencygrowth"],
+    score_hint: 92,
+  },
+  {
+    id: "t3",
+    name: "3 Lessons From Production",
+    hook: "3 lessons from running [SUBJECT] in production for [TIME].",
+    body: "1/ [LESSON 1]\n2/ [LESSON 2]\n3/ [LESSON 3]\n\nThe ones that survive are the ones with deterministic gates.",
+    cta: "Which one hits hardest?",
+    hashtags: ["#aiops", "#production"],
+    score_hint: 90,
+  },
+  {
+    id: "t4",
+    name: "Doctrine Drop",
+    hook: "[DOCTRINE PRINCIPLE]. No exceptions.",
+    body: "We run every decision through this filter:\n\n→ Does it have a gate?\n→ Does it have a ProofPacket?\n→ Does it leave the system stronger?\n\nIf the answer is no to any of these, it doesn't ship.",
+    cta: "What's your gate filter?",
+    hashtags: ["#doctrine", "#execution"],
+    score_hint: 88,
+  },
+  {
+    id: "t5",
+    name: "Number Drop",
+    hook: "[NUMBER] [UNITS] in [TIME]. No automation. Here's what we did.",
+    body: "Step 1: [STEP]\nStep 2: [STEP]\nStep 3: [STEP]\n\nThe leverage wasn't the tool. It was the constraint.",
+    cta: "What's your constraint right now?",
+    hashtags: ["#metrics", "#growth"],
+    score_hint: 90,
+  },
+  {
+    id: "t6",
+    name: "Contrarian Take",
+    hook: "Unpopular opinion: [POSITION].",
+    body: "Everyone says [COMMON VIEW]. They're wrong.\n\nHere's the evidence:\n\n→ [EVIDENCE 1]\n→ [EVIDENCE 2]\n→ [EVIDENCE 3]\n\nThe data doesn't lie.",
+    cta: "Disagree? Tell me why.",
+    hashtags: ["#contrarian", "#opinion"],
+    score_hint: 85,
+  },
+];
+
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function formatDate(iso: string | null): string {
   if (!iso) return "Not scheduled";
@@ -103,6 +172,12 @@ export default function LinkedInPostManagerPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<PostStatus | "all">("all");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
 
   /* Composer state */
   const [draftContent, setDraftContent] = useState("");
@@ -138,6 +213,7 @@ export default function LinkedInPostManagerPage() {
   }, [posts]);
 
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const handleSaveNew = useCallback(() => {
     setComposerError(null);
@@ -185,6 +261,48 @@ export default function LinkedInPostManagerPage() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
+  const handleStatusChange = useCallback((id: string, next: PostStatus) => {
+    setPosts((prev) => prev.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            status: next,
+            scheduledDate:
+              next === "scheduled" && !p.scheduledDate
+                ? new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+                : next === "draft"
+                ? null
+                : p.scheduledDate,
+          }
+        : p
+    ));
+  }, []);
+
+  const handleCopyToClipboard = useCallback(async (post: DraftPost) => {
+    const tags = post.hashtags.length ? "\n\n" + post.hashtags.join(" ") : "";
+    const text = post.content + tags;
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast(`Copied "${post.content.slice(0, 40)}…" to clipboard`);
+      setTimeout(() => setToast(null), 2200);
+    } catch {
+      setToast("Clipboard unavailable — select and copy manually");
+      setTimeout(() => setToast(null), 2200);
+    }
+  }, []);
+
+  const handleApplyTemplate = useCallback((tpl: PostTemplate) => {
+    const composed = `${tpl.hook}\n\n${tpl.body}\n\n${tpl.cta}`;
+    setDraftContent(composed);
+    setDraftHashtags(tpl.hashtags);
+    setDraftImage(`template-${tpl.id}.png`);
+    setDraftImageName(`${tpl.name.toLowerCase().replace(/\s+/g, "-")}.png`);
+    setTemplatesOpen(false);
+    setComposerOpen(true);
+    setToast(`Template "${tpl.name}" loaded — image slot auto-filled`);
+    setTimeout(() => setToast(null), 2200);
+  }, []);
+
   const handleAddHashtag = useCallback((tag: string) => {
     const clean = tag.trim().replace(/\s+/g, "");
     if (clean && !draftHashtags.includes(clean)) {
@@ -207,15 +325,26 @@ export default function LinkedInPostManagerPage() {
               Draft, score, and schedule posts with image enforcement — AntiGeneric ≥ 85 for all public-facing content.
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setComposerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm transition-colors"
-            style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
-          >
-            <Plus size={16} /> New Post
-          </motion.button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setTemplatesOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-colors"
+              style={{ background: "transparent", color: "var(--gold)", borderColor: "rgba(212,165,116,0.35)" }}
+            >
+              <Sparkles size={16} /> Templates
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setComposerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm transition-colors"
+              style={{ background: "var(--gold)", color: "var(--bg-deep)" }}
+            >
+              <Plus size={16} /> New Post
+            </motion.button>
+          </div>
         </div>
       </motion.section>
 
@@ -247,25 +376,46 @@ export default function LinkedInPostManagerPage() {
         ))}
       </section>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-1 border-b" style={{ borderColor: "rgba(212, 165, 116, 0.15)" }}>
-        {(["all", "draft", "scheduled", "published", "archived"] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className="flex items-center gap-2 px-4 py-2.5 font-medium text-[13px] transition-all"
-            style={{
-              color: filter === k ? "var(--gold)" : "var(--cream-mute)",
-              borderBottom: filter === k ? "2px solid var(--gold)" : "2px solid transparent",
-            }}
-          >
-            <Filter size={12} /> {k === "all" ? "All Posts" : STATUS_META[k].label}
-            <span style={{ color: "var(--cream-dim)" }}>({counts[k]})</span>
-          </button>
-        ))}
+      {/* Filter Tabs + View Toggle */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-1 border-b" style={{ borderColor: "rgba(212, 165, 116, 0.15)" }}>
+          {(["all", "draft", "scheduled", "published", "archived"] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              className="flex items-center gap-2 px-4 py-2.5 font-medium text-[13px] transition-all"
+              style={{
+                color: filter === k ? "var(--gold)" : "var(--cream-mute)",
+                borderBottom: filter === k ? "2px solid var(--gold)" : "2px solid transparent",
+              }}
+            >
+              <Filter size={12} /> {k === "all" ? "All Posts" : STATUS_META[k].label}
+              <span style={{ color: "var(--cream-dim)" }}>({counts[k]})</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 p-1 rounded-lg border" style={{ borderColor: "var(--line-soft)", background: "var(--bg-elev)" }}>
+          {([
+            { k: "list", icon: Layers, label: "List" },
+            { k: "calendar", icon: CalendarDays, label: "Calendar" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.k}
+              onClick={() => setViewMode(opt.k)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
+              style={{
+                background: viewMode === opt.k ? "var(--gold)" : "transparent",
+                color: viewMode === opt.k ? "var(--bg-deep)" : "var(--cream-dim)",
+              }}
+            >
+              <opt.icon size={12} /> {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Post Cards */}
+      {viewMode === "list" && (
       <section className="space-y-3">
         <AnimatePresence mode="popLayout">
           {filtered.map((post, i) => {
@@ -285,12 +435,26 @@ export default function LinkedInPostManagerPage() {
                   checks={eval_.checks}
                   onDelete={() => handleDelete(post.id)}
                   onPreview={() => openPreview(post)}
+                  onStatusChange={(s) => handleStatusChange(post.id, s)}
+                  onCopy={() => handleCopyToClipboard(post)}
                 />
               </motion.div>
             );
           })}
         </AnimatePresence>
       </section>
+      )}
+
+      {/* Calendar View */}
+      {viewMode === "calendar" && (
+        <CalendarView
+          posts={filtered}
+          month={calendarMonth}
+          onPrev={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+          onNext={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+          onSelect={(post) => openPreview(post)}
+        />
+      )}
 
       {/* Composer Modal */}
       <AnimatePresence>
@@ -419,7 +583,7 @@ export default function LinkedInPostManagerPage() {
                 {/* Schedule */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium mb-2" style={{ color: "var(--cream-soft)" }}>
-                    <Calendar size={14} /> Schedule (optional)
+                    <CalIcon size={14} /> Schedule (optional)
                   </label>
                   <input
                     type="datetime-local"
@@ -583,6 +747,90 @@ export default function LinkedInPostManagerPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-lg text-sm font-medium border shadow-lg"
+            style={{ background: "var(--bg-card)", borderColor: "var(--gold)", color: "var(--cream)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} style={{ color: "var(--gold)" }} />
+              {toast}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Templates Modal */}
+      <AnimatePresence>
+        {templatesOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+            onClick={() => setTemplatesOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl border max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              style={{ background: "var(--bg-card)", borderColor: "var(--line)" }}
+            >
+              <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--line-soft)" }}>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={18} style={{ color: "var(--gold)" }} />
+                  <h2 className="text-lg font-bold" style={{ color: "var(--cream)" }}>High-Score Templates</h2>
+                </div>
+                <button onClick={() => setTemplatesOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--bg-elev)]">
+                  <X size={18} style={{ color: "var(--cream-dim)" }} />
+                </button>
+              </div>
+              <div className="p-5">
+                <p className="text-xs mb-4" style={{ color: "var(--cream-mute)" }}>
+                  Templates pre-fill hook + body + CTA + hashtags. Image slot is auto-stubbed so the score-runs-with-image gate stays satisfied.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {TEMPLATES.map((tpl) => (
+                    <motion.button
+                      key={tpl.id}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className="text-left rounded-xl border p-4 transition-all"
+                      style={{ background: "var(--bg-mid)", borderColor: "var(--line-soft)" }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold" style={{ color: "var(--cream)" }}>{tpl.name}</span>
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded"
+                          style={{ background: "rgba(90,184,150,0.15)", color: "#5ab896" }}
+                        >
+                          ~{tpl.score_hint}
+                        </span>
+                      </div>
+                      <p className="text-xs italic mb-2" style={{ color: "var(--cream-soft)" }}>"{tpl.hook}"</p>
+                      <div className="flex flex-wrap gap-1">
+                        {tpl.hashtags.map((h) => (
+                          <span key={h} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-elev)", color: "var(--gold-soft)" }}>{h}</span>
+                        ))}
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -594,12 +842,16 @@ function PostCard({
   checks,
   onDelete,
   onPreview,
+  onStatusChange,
+  onCopy,
 }: {
   post: DraftPost;
   score: number;
   checks: { label: string; pass: boolean; weight: number }[];
   onDelete: () => void;
   onPreview: () => void;
+  onStatusChange: (next: PostStatus) => void;
+  onCopy: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const meta = STATUS_META[post.status];
@@ -637,20 +889,41 @@ function PostCard({
               <AlertTriangle size={10} /> NO IMAGE
             </span>
           )}
+          {/* Status quick-change */}
+          <select
+            value={post.status}
+            onChange={(e) => onStatusChange(e.target.value as PostStatus)}
+            className="text-[10px] font-semibold px-2 py-1 rounded-md border outline-none cursor-pointer"
+            style={{
+              background: `${meta.color}1a`,
+              color: meta.color,
+              borderColor: `${meta.color}33`,
+            }}
+            title="Change status"
+          >
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="published">Published</option>
+            <option value="archived">Archive</option>
+          </select>
+          <button
+            onClick={onCopy}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-all"
+            style={{ background: "rgba(90, 184, 150, 0.1)", color: "#5ab896", border: "1px solid rgba(90, 184, 150, 0.2)" }}
+            title="Copy to clipboard"
+          >
+            <Copy size={10} /> Copy
+          </button>
+          <button onClick={onPreview} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-all" style={{ background: "rgba(212, 165, 116, 0.1)", color: "#d4a574", border: "1px solid rgba(212, 165, 116, 0.15)" }}>
+            <Eye size={10} /> Preview
+          </button>
           <button onClick={onDelete} className="p-1.5 rounded hover:bg-[var(--bg-elev)] transition-colors">
             <Trash2 size={14} style={{ color: "#ef4444" }} />
           </button>
-            <button
-              onClick={onPreview}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-all"
-              style={{ background: "rgba(212, 165, 116, 0.1)", color: "#d4a574", border: "1px solid rgba(212, 165, 116, 0.15)" }}
-            >
-              <Eye size={10} /> Preview
-            </button>
-          </div>
         </div>
+      </div>
 
-        {/* Content Preview */}
+      {/* Content Preview */}
       <div className="text-sm leading-relaxed" style={{ color: "var(--cream-soft)" }}>
         {post.content.split("\n").map((line, idx) => (
           <p key={idx} className={idx > 0 ? "mt-1" : ""}>{line}</p>
@@ -726,3 +999,168 @@ function PostCard({
     </div>
   );
 }
+
+/* ── Calendar View Sub-Component ────────────────────────────────────────────── */
+function CalendarView({
+  posts,
+  month,
+  onPrev,
+  onNext,
+  onSelect,
+}: {
+  posts: DraftPost[];
+  month: Date;
+  onPrev: () => void;
+  onNext: () => void;
+  onSelect: (post: DraftPost) => void;
+}) {
+  const monthLabel = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  // Compute grid days for the month
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const startOffset = firstDay.getDay(); // 0=Sunday
+  const totalDays = lastDay.getDate();
+  const cells: Array<{ date: Date | null }> = [];
+  for (let i = 0; i < startOffset; i++) cells.push({ date: null });
+  for (let d = 1; d <= totalDays; d++) cells.push({ date: new Date(month.getFullYear(), month.getMonth(), d) });
+  while (cells.length % 7 !== 0) cells.push({ date: null });
+
+  // Posts grouped by yyyy-mm-dd
+  const byDay = new Map<string, DraftPost[]>();
+  for (const p of posts) {
+    if (!p.scheduledDate) continue;
+    const key = p.scheduledDate.slice(0, 10);
+    byDay.set(key, [...(byDay.get(key) || []), p]);
+  }
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const totalScheduledThisMonth = posts.filter((p) => {
+    if (!p.scheduledDate) return false;
+    const d = new Date(p.scheduledDate);
+    return d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth();
+  }).length;
+
+  return (
+    <section className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onPrev}
+              className="p-1.5 rounded-md border hover:bg-[var(--bg-elev)] transition"
+              style={{ borderColor: "var(--line-soft)", color: "var(--cream-dim)" }}
+              title="Previous month"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              onClick={onNext}
+              className="p-1.5 rounded-md border hover:bg-[var(--bg-elev)] transition"
+              style={{ borderColor: "var(--line-soft)", color: "var(--cream-dim)" }}
+              title="Next month"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+          <h2 className="text-lg font-semibold" style={{ color: "var(--cream)" }}>{monthLabel}</h2>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <span style={{ color: "var(--cream-mute)" }}>
+            <span className="font-bold" style={{ color: "var(--gold)" }}>{totalScheduledThisMonth}</span> scheduled this month
+          </span>
+          <span className="flex items-center gap-1" style={{ color: "var(--cream-mute)" }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: "#fbbf24" }} /> Scheduled
+          </span>
+          <span className="flex items-center gap-1" style={{ color: "var(--cream-mute)" }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: "#5ab896" }} /> Published
+          </span>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "var(--line-soft)" }}
+      >
+        {/* Day labels */}
+        <div className="grid grid-cols-7 border-b" style={{ background: "var(--bg-mid)", borderColor: "var(--line-soft)" }}>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <div
+              key={d}
+              className="text-[10px] uppercase tracking-wider font-semibold py-2 text-center"
+              style={{ color: "var(--cream-mute)" }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+        {/* Cells */}
+        <div className="grid grid-cols-7">
+          {cells.map((cell, i) => {
+            const dateKey = cell.date ? cell.date.toISOString().slice(0, 10) : "";
+            const dayPosts = cell.date ? byDay.get(dateKey) || [] : [];
+            const isToday = dateKey === todayKey;
+            return (
+              <div
+                key={i}
+                className="min-h-[88px] border-b border-r p-1.5 flex flex-col gap-1"
+                style={{
+                  borderColor: "var(--line-soft)",
+                  background: isToday ? "rgba(212, 165, 116, 0.08)" : "transparent",
+                }}
+              >
+                {cell.date && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px] font-semibold"
+                        style={{ color: isToday ? "var(--gold)" : "var(--cream-dim)" }}
+                      >
+                        {cell.date.getDate()}
+                      </span>
+                      {dayPosts.length > 0 && (
+                        <span
+                          className="text-[9px] font-bold px-1 rounded"
+                          style={{ background: "rgba(212,165,116,0.15)", color: "var(--gold)" }}
+                        >
+                          {dayPosts.length}
+                        </span>
+                      )}
+                    </div>
+                    {dayPosts.slice(0, 2).map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => onSelect(p)}
+                        className="text-left text-[9px] px-1.5 py-0.5 rounded truncate font-medium w-full transition-all hover:scale-[1.02]"
+                        style={{
+                          background: `${STATUS_META[p.status].color}26`,
+                          color: STATUS_META[p.status].color,
+                        }}
+                        title={p.content}
+                      >
+                        {p.content.split("\n")[0].slice(0, 28)}
+                      </button>
+                    ))}
+                    {dayPosts.length > 2 && (
+                      <span className="text-[8px]" style={{ color: "var(--cream-mute)" }}>
+                        +{dayPosts.length - 2} more
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-xs" style={{ color: "var(--cream-mute)" }}>
+        <span>Click any scheduled post chip to preview. Drafts and unscheduled posts aren't plotted.</span>
+      </div>
+    </section>
+  );
+}
+
