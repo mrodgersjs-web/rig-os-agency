@@ -1,9 +1,9 @@
-import PipelineView from "@/components/PipelineView";
+import UnifiedPipeline from "@/components/UnifiedPipeline";
 
 export default function PipelineRoute() {
   return (
     <div className="pb-6">
-      <PipelineView />
+      <UnifiedPipeline />
     </div>
   );
 }
