@@ -11,7 +11,7 @@ import {
   Receipt, CreditCard, AlertCircle, ArrowRightLeft,
   CheckCircle2, Clock, Inbox, Calendar,
   Target, FolderOpen, Activity, Smartphone, Database, PlugZap, Server, Radio,
-  Gauge, GitBranch,
+  Gauge, GitBranch, Sigma, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -54,6 +54,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/agency/pipeline", label: "Pipeline", icon: Rocket, children: [
         { href: "/agency/pipeline/deals/list", label: "Deals", icon: Target },
         { href: "/agency/pipeline/forecast/list", label: "Forecast", icon: TrendingUp },
+        { href: "/agency/forecast", label: "Calibration", icon: Sigma },
         { href: "/agency/pipeline/proposals/list", label: "Proposals", icon: FileText },
         { href: "/agency/pipeline/activities/list", label: "Activities", icon: Activity },
       ]},
@@ -76,6 +77,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/agency/gtm-pipeline", label: "GTM Pipeline", icon: GitBranch },
       { href: "/agency/gtm-real", label: "GTM Real (V2)", icon: Radio, accent: "var(--emerald)" },
       { href: "/agency/leads", label: "Lead Scoring", icon: Target, accent: "var(--gold)" },
+      { href: "/agency/pipeline-coverage", label: "Pipeline Coverage", icon: ShieldCheck, accent: "var(--emerald)" },
       { href: "/rig-linkedin", label: "LinkedIn", icon: Users },
       { href: "/rig-instagram", label: "Instagram", icon: Camera },
       { href: "/agency/outreach", label: "Outreach", icon: Mail },
