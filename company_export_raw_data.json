@@ -1,0 +1,37 @@
+[
+  {
+    "Company": "Acme Corp",
+    "Industry": "Technology",
+    "EmployeeCount": 1500,
+    "Website": "https://www.acmecorp.com",
+    "LinkedInURL": "https://www.linkedin.com/company/acmecorp/",
+    "KeyContacts": [
+      {"Name": "Jane Doe", "Title": "VP of Marketing", "ContactMethod": "Email"},
+      {"Name": "John Smith", "Title": "CTO", "ContactMethod": "Phone"}
+    ],
+    "LastUpdated": "2026-07-06T12:00:00Z"
+  },
+  {
+    "Company": "Innovate Dynamics",
+    "Industry": "Consumer Goods",
+    "EmployeeCount": 45,
+    "Website": "https://www.innovatedynamics.net",
+    "LinkedInURL": "https://www.linkedin.com/company/innovatedynamics/",
+    "KeyContacts": [
+      {"Name": "Alice Johnson", "Title": "CEO", "ContactMethod": "Email"}
+    ],
+    "LastUpdated": "2026-07-06T12:00:00Z"
+  },
+  {
+    "Company": "Global Solutions Ltd.",
+    "Industry": "Finance",
+    "EmployeeCount": 8900,
+    "Website": "https://www.globersolutions.global",
+    "LinkedInURL": "https://www.linkedin.com/company/global-solutions/",
+    "KeyContacts": [
+      {"Name": "Robert Brown", "Title": "Head of Risk", "ContactMethod": "Email"},
+      {"Name": "Sarah Lee", "Title": "Compliance Officer", "ContactMethod": "Phone"}
+    ],
+    "LastUpdated": "2026-07-06T12:00:00Z"
+  }
+]
