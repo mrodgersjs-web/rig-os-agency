@@ -11,7 +11,7 @@ import {
   Receipt, CreditCard, AlertCircle, ArrowRightLeft,
   CheckCircle2, Clock, Inbox, Calendar,
   Target, FolderOpen, Activity, Smartphone, Database, PlugZap, Server, Radio,
-  Gauge, GitBranch, Sigma, ShieldCheck, Trophy,
+  Gauge, GitBranch, Sigma, ShieldCheck, Trophy, MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -120,6 +120,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "Mission Control",
     items: [
+      { href: "/jake", label: "Jake PAI", icon: Bot, accent: "var(--emerald)" },
       { href: "/stripe", label: "Revenue (Stripe)", icon: CreditCard },
       { href: "/pipeline", label: "Build Pipeline", icon: Rocket },
       { href: "/kanban", label: "Kanban", icon: LayoutGrid },

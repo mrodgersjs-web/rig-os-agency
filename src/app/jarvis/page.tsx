@@ -20,13 +20,31 @@ export default function JarvisPage() {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
-    fetch('/api/agency/jarvis')
+    fetch('/api/jake/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'morning_report' }) })
       .then(r => r.json())
       .then(d => { setBriefing(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  const speakBriefing = () => {
+  const speakBriefing = async () => {
+    // Try ElevenLabs first
+    try {
+      const voiceRes = await fetch('/api/jake/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'morning report', mode: 'voice' }),
+      });
+      const voiceData = await voiceRes.json();
+      if (voiceData.hasVoice && voiceData.voice) {
+        const audio = new Audio("data:audio/mpeg;base64," + voiceData.voice);
+        setSpeaking(true);
+        audio.onended = () => { setSpeaking(false); setCurrentSection(-1); };
+        audio.play();
+        return;
+      }
+    } catch {}
+    
+    // Fallback to browser TTS
     if (!briefing || typeof window === 'undefined' || !window.speechSynthesis) return;
     
     if (speaking) {
