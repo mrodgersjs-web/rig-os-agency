@@ -11,7 +11,7 @@ import {
   Receipt, CreditCard, AlertCircle, ArrowRightLeft,
   CheckCircle2, Clock, Inbox, Calendar,
   Target, FolderOpen, Activity, Smartphone, Database, PlugZap, Server, Radio,
-  Gauge, GitBranch, Sigma, ShieldCheck,
+  Gauge, GitBranch, Sigma, ShieldCheck, Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -87,6 +87,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/scraping", label: "Scraping", icon: Search },
       { href: "/agency/social", label: "Social", icon: Users },
       { href: "/agency/win-loss", label: "Win/Loss", icon: BarChart3, accent: "var(--emerald)" },
+      { href: "/agency/marathon", label: "Marathon", icon: Trophy, accent: "var(--gold)" },
     ],
   },
   {
