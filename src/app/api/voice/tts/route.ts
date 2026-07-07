@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const outFile = join(tmpdir(), `jake-tts-${id}.mp3`);
 
     try {
-      await execFileAsync("python3", ["-m", "edge_tts",
+      await execFileAsync("/usr/bin/python3", ["-m", "edge_tts",
         "--voice", voiceName,
         "--rate", rateStr,
         "--pitch", pitchStr,
