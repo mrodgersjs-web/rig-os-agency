@@ -90,6 +90,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/agency/social", label: "Social", icon: Users },
       { href: "/agency/win-loss", label: "Win/Loss", icon: BarChart3, accent: "var(--emerald)" },
       { href: "/agency/marathon", label: "Marathon", icon: Trophy, accent: "var(--gold)" },
+      { href: "/agency/goals", label: "$10M Roadmap", icon: Target, accent: "var(--gold)" },
     ],
   },
   {
