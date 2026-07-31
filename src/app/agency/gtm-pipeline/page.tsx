@@ -8,6 +8,7 @@ import {
   ExternalLink, Filter, Flame, Mail, MailCheck, MailOpen, MailPlus,
   PieChart as PieChartIcon, RefreshCw, Search, Send, Sparkles, Target,
   TrendingUp, Users, Zap, GitBranch, Layers, Award, Calendar, ArrowRight,
+  FileText,
 } from "lucide-react";
 
 const C = {
@@ -15,6 +16,10 @@ const C = {
   bgMid: "var(--bg-mid)",
   card: "var(--bg-card)",
   elev: "var(--bg-elev)",
+  // `C.blue` was referenced in two places but never defined, so those icons
+  // rendered with color={undefined}. There is no blue in Midnight Aubergine —
+  // map it onto the emerald accent rather than introducing a second palette.
+  blue: "var(--emerald)",
   text: "var(--cream)",
   text2: "var(--cream-soft)",
   text3: "var(--cream-dim)",

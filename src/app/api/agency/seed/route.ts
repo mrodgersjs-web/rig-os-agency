@@ -7,10 +7,30 @@
 // POST /api/agency/seed           → writes all seed collections
 // DELETE /api/agency/seed         → wipes all collections
 //
-// This is the single biggest demoability improvement: with seed data the
-// dashboard, clients list, proposals board, contracts page, invoices, and
-// pipeline all populate. Without it the health endpoint reports zeros and
-// every list view is empty.
+// ⚠️  READ THIS BEFORE RE-ENABLING SEED-BY-DEFAULT ⚠️
+//
+// The original comment here read: "This is the single biggest demoability
+// improvement: with seed data the dashboard ... all populate. Without it the
+// health endpoint reports zeros and every list view is empty."
+//
+// That instinct is precisely the 20%-vs-100% gap. The app was made to LOOK
+// populated rather than to REPORT TRUTH, and the result was two endpoints
+// disagreeing in the same second about whether RIG has customers:
+//   /api/agency/health → clients:10, contracts:6
+//   /api/agency/goals  → clients:0,  arr:0, "_honest":"Pre-revenue."
+// The 10 "clients" are fabricated companies with fabricated humans
+// (Rocky Mountain Orthopedics / Dr. Sarah Chen / 303-555-0101 / $5,000-mo).
+// RIG is pre-revenue: $0 revenue, 0 clients, 0 calls held.
+//
+// An empty list is HONEST. Fake customers are not. RIG has already been
+// burned by a scoreboard contradicting its own ledger.
+//
+// Therefore this route now:
+//   • stamps `_seeded: true` + `_demo: true` into every collection it writes,
+//     so every read path can surface a DEMO DATA banner; and
+//   • is opt-in only — it is never called at boot, and the shipped state of
+//     the app is an empty store.
+// Do not remove those flags, and do not call this on startup.
 
 import { NextResponse } from "next/server";
 import * as fs from "fs";
@@ -34,7 +54,17 @@ function ensureDataDir(): void {
 
 function writeCollection<T>(filename: string, items: T[]): void {
   ensureDataDir();
-  const wrapped = { data: items, updatedAt: new Date().toISOString() };
+  // `_seeded` / `_demo` are load-bearing, not decoration. They are how a read
+  // path knows these rows are demo data and must be rendered behind a DEMO
+  // banner rather than as customers. Removing them re-creates the G1 defect.
+  const wrapped = {
+    data: items,
+    updatedAt: new Date().toISOString(),
+    _seeded: true,
+    _demo: true,
+    _warning:
+      "SEEDED DEMO DATA — not real customers. RIG is pre-revenue ($0 ARR, 0 clients, 0 calls held). Do not present these rows as business results.",
+  };
   fs.writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(wrapped, null, 2));
 }
 

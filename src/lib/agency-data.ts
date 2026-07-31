@@ -219,12 +219,48 @@ export const SERVICE_TIERS: ServiceTier[] = [
   },
 ];
 
-// ── Seed Clients ───────────────────────────────────────────────────
-const now = new Date().toISOString();
-const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
-const daysAhead = (n: number) => new Date(Date.now() + n * 86400000).toISOString();
+// ── DEMO DATA — OFF BY DEFAULT ─────────────────────────────────────
+//
+// Everything below this line is FABRICATED. "Rocky Mountain Orthopedics",
+// "Dr. Sarah Chen", "303-555-0101", "$5,000/mo" — none of it is real. RIG is
+// pre-revenue: $0 ARR, 0 clients, 0 signed contracts, 0 calls held.
+//
+// TWO DEFECTS THIS BLOCK FIXES
+//
+// G1 — these rows were served as truth. /api/agency/health reported
+//      `clients:10, contracts:6` while /api/agency/goals reported
+//      `clients:0, arr:0` in the same second. A buyer opening two tabs sees a
+//      product that does not know whether it has customers.
+//
+// G2 — the dates were computed as `Date.now() ± N days`, so the fake pipeline
+//      REFRESHED ITSELF FOREVER and could never look stale. A stale fake is
+//      eventually obvious; a self-refreshing fake never is.
+//
+// The fix is two-part:
+//   • DEMO_ENABLED gates every exported SEED_* array to [] unless someone
+//     explicitly opts in with RIG_DEMO_DATA=1. The shipped state is empty,
+//     and an empty list is honest.
+//   • Dates anchor to a FIXED epoch, so if demo mode is ever switched on the
+//     data visibly ages instead of masquerading as live.
+//
+// NOTE: src/lib/agency-store.ts `loadPipeline()` RE-SEEDS from SEED_PIPELINE
+// and writes it back to disk whenever the store is empty. That is why simply
+// deleting .data/*.json was not enough — the app healed its own fabrication on
+// the next request. Gating at the source is what actually holds.
 
-export const SEED_CLIENTS: Client[] = [
+/** Demo data is opt-in. Default OFF — the honest state is an empty store. */
+export const DEMO_ENABLED = process.env.RIG_DEMO_DATA === "1";
+
+/**
+ * Fixed anchor for demo timestamps. NOT Date.now() — see G2 above. Demo rows
+ * must age visibly so nobody mistakes them for live pipeline.
+ */
+const DEMO_EPOCH = Date.parse("2026-07-01T00:00:00Z");
+const now = new Date(DEMO_EPOCH).toISOString();
+const daysAgo = (n: number) => new Date(DEMO_EPOCH - n * 86400000).toISOString();
+const daysAhead = (n: number) => new Date(DEMO_EPOCH + n * 86400000).toISOString();
+
+const DEMO_CLIENTS: Client[] = [
   { id: "c001", name: "Rocky Mountain Orthopedics", vertical: "healthcare", status: "active", health: "green", contactName: "Dr. Sarah Chen", contactEmail: "sarah@rmortho.com", contactPhone: "303-555-0101", website: "rmortho.com", serviceTier: "growth", monthlyFee: 5000, annualFee: 60000, startDate: daysAgo(90), endDate: daysAhead(275), autoRenew: true, services: ["Claims processing AI", "OR utilization optimizer", "Denials management"], assignedAgents: ["rig-healthcare-01", "rig-claims-02"], notes: "OR utilization went from 63% to 89% in pilot.", createdAt: daysAgo(95), updatedAt: daysAgo(2) },
   { id: "c002", name: "Henderson Construction Group", vertical: "construction", status: "active", health: "green", contactName: "Mike Henderson", contactEmail: "mike@hendersonconst.com", contactPhone: "303-555-0102", website: "hendersonconst.com", serviceTier: "scale", monthlyFee: 8000, annualFee: 96000, startDate: daysAgo(60), endDate: daysAhead(305), autoRenew: true, services: ["Project risk AI", "Bid estimation engine", "Safety compliance monitor"], assignedAgents: ["rig-construction-01"], notes: "Bid win rate up 23% since AI estimation deployed.", createdAt: daysAgo(65), updatedAt: daysAgo(1) },
   { id: "c003", name: "Denver Dental Partners", vertical: "dental", status: "active", health: "yellow", contactName: "Dr. James Park", contactEmail: "james@denverdental.com", contactPhone: "303-555-0103", website: "denverdental.com", serviceTier: "starter", monthlyFee: 2500, annualFee: 30000, startDate: daysAgo(45), endDate: daysAhead(320), autoRenew: false, services: ["Patient scheduling AI"], assignedAgents: ["rig-dental-01"], notes: "Renewal discussion needed — contract expires in 320 days.", createdAt: daysAgo(50), updatedAt: daysAgo(7) },
@@ -237,14 +273,22 @@ export const SEED_CLIENTS: Client[] = [
   { id: "c010", name: "Granite Peak Construction", vertical: "construction", status: "negotiation", health: "yellow", contactName: "Tom Bradley", contactEmail: "tom@granitepeak.com", contactPhone: "303-555-0110", website: "granitepeak.com", serviceTier: "enterprise", monthlyFee: 18000, annualFee: 216000, startDate: daysAgo(15), endDate: null, autoRenew: false, services: [], assignedAgents: [], notes: "Negotiating enterprise contract. Price discussion ongoing.", createdAt: daysAgo(15), updatedAt: daysAgo(1) },
 ];
 
+/** Gated export. Empty unless RIG_DEMO_DATA=1. */
+export const SEED_CLIENTS: Client[] = DEMO_ENABLED ? DEMO_CLIENTS : [];
+
 // ── Seed Proposals ────────────────────────────────────────────────
-export const SEED_PROPOSALS: Proposal[] = [
+const DEMO_PROPOSALS: Proposal[] = [
   { id: "p001", clientId: "c005", clientName: "Front Range Manufacturing", vertical: "manufacturing", scope: "5 AI agents: quality control, supply chain, predictive maintenance, safety, scheduling", monthlyFee: 8000, annualValue: 96000, status: "sent", sentDate: daysAgo(5), acceptedDate: null, validUntil: daysAhead(25), proofPacketId: null, createdAt: daysAgo(5) },
   { id: "p002", clientId: "c006", clientName: "Milestone Partners PE", vertical: "pe_cfo", scope: "Enterprise: unlimited agents, white-label, on-premise, 24/7 monitoring", monthlyFee: 18000, annualValue: 216000, status: "sent", sentDate: daysAgo(5), acceptedDate: null, validUntil: daysAhead(25), proofPacketId: null, createdAt: daysAgo(5) },
   { id: "p003", clientId: "c010", clientName: "Granite Peak Construction", vertical: "construction", scope: "Enterprise: 10+ agents, custom dashboards, dedicated team, SLA", monthlyFee: 18000, annualValue: 216000, status: "sent", sentDate: daysAgo(10), acceptedDate: null, validUntil: daysAhead(20), proofPacketId: null, createdAt: daysAgo(10) },
 ];
 
+/** Gated export. Empty unless RIG_DEMO_DATA=1. */
+export const SEED_PROPOSALS: Proposal[] = DEMO_ENABLED ? DEMO_PROPOSALS : [];
+
 // ── Seed Contracts ─────────────────────────────────────────────────
+// Derived from SEED_CLIENTS, which is already gated — so these are empty by
+// default too. RIG has 0 signed contracts.
 export const SEED_CONTRACTS: Contract[] = SEED_CLIENTS
   .filter((c) => c.status === "active")
   .map((c, i) => ({
@@ -289,13 +333,20 @@ export const REVENUE_PROJECTIONS: RevenueMetric[] = [
 ];
 
 // ── Pipeline Deals ─────────────────────────────────────────────────
-export const SEED_PIPELINE: PipelineDeal[] = [
+// G2: these five named deals ($30K Colorado Services, $60K Pioneer Dental,
+// $96K Front Range, $216K Milestone PE, $216K Granite Peak — $618K of
+// "pipeline") were served with self-refreshing dates. RIG's real pipeline is
+// 0 booked, 0 held. Gated to [] by default.
+const DEMO_PIPELINE: PipelineDeal[] = [
   { id: "d001", clientName: "Colorado Services Co", vertical: "services", dealSize: 30_000, probability: 20, nextAction: "Discovery call", nextActionDate: daysAhead(3), stage: "prospect" },
   { id: "d002", clientName: "Pioneer Dental Group", vertical: "dental", dealSize: 60_000, probability: 40, nextAction: "Send proposal", nextActionDate: daysAhead(2), stage: "qualified" },
   { id: "d003", clientName: "Front Range Manufacturing", vertical: "manufacturing", dealSize: 96_000, probability: 60, nextAction: "Follow up on proposal", nextActionDate: daysAhead(5), stage: "proposal_sent" },
   { id: "d004", clientName: "Milestone Partners PE", vertical: "pe_cfo", dealSize: 216_000, probability: 50, nextAction: "Board presentation", nextActionDate: daysAhead(7), stage: "proposal_sent" },
   { id: "d005", clientName: "Granite Peak Construction", vertical: "construction", dealSize: 216_000, probability: 70, nextAction: "Price negotiation call", nextActionDate: daysAhead(1), stage: "negotiation" },
 ];
+
+/** Gated export. Empty unless RIG_DEMO_DATA=1. */
+export const SEED_PIPELINE: PipelineDeal[] = DEMO_ENABLED ? DEMO_PIPELINE : [];
 
 // ── Helper Functions ──────────────────────────────────────────────
 export function getClients(): Client[] {

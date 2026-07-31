@@ -21,6 +21,8 @@ interface Email {
 interface InboxResponse {
   _real: boolean;
   _source: string;
+  /** True when the payload is a hardcoded fixture rather than a real mailbox read. */
+  _mock?: boolean;
   emails: Email[];
   summary: {
     total: number;
@@ -183,8 +185,12 @@ function getMockInbox(): InboxResponse {
   }
 
   return {
-    _real: true,
-    _source: "Python email_calendar_manager.py inbox --json (mock data pending backend)",
+    // Was `_real: true` alongside "(mock data pending backend)". These are
+    // invented emails from invented people (sarah.chen@techflow.io). Nothing
+    // in this response came from a mailbox.
+    _real: false,
+    _mock: true,
+    _source: "HARDCODED FIXTURE — no mailbox is connected. Not real email.",
     emails,
     summary: { total: emails.length, unread, urgent, needsReply, byCategory },
   };

@@ -127,24 +127,84 @@ function getTotalFileCount(): number {
   }
 }
 
-/** Get total word count for all markdown files in the vault via find + wc (fast). */
-function getTotalWordCount(): number {
+/**
+ * Total word count across the vault.
+ *
+ * This was labelled "(fast)" and was anything but: `find … -exec cat {} + | wc -w`
+ * concatenates and word-counts EVERY .md/.txt/.json in a 65,277-note vault —
+ * gigabytes of I/O per request. /api/agency/vault-enrich returned nothing at
+ * all inside a 45s probe because of it. The `timeout: 30_000` did not save it
+ * either: execSync's timeout kills the shell, not necessarily the whole
+ * `find | cat | wc` pipeline, and 30s is already past any sane request budget.
+ *
+ * Two changes:
+ *   • CACHED for 10 minutes with an `as_of` stamp. A vault word count does not
+ *     meaningfully change between two page loads, and a cached number labelled
+ *     with its age is honest; a live number nobody waits for is useless.
+ *   • Bounded to markdown only and given a real timeout. On timeout we return
+ *     null → the caller renders UNAVAILABLE rather than a fabricated 0.
+ */
+const WORDCOUNT_TTL_MS = 10 * 60_000;
+let _wordCount: { value: number | null; as_of: string; ts: number } | null = null;
+
+function getTotalWordCount(): number | null {
+  const now = Date.now();
+  if (_wordCount && now - _wordCount.ts < WORDCOUNT_TTL_MS) return _wordCount.value;
+  let value: number | null = null;
   try {
     const out = execSync(
-      `find "${VAULT_ROOT}" -type f \\( -name "*.md" -o -name "*.txt" -o -name "*.json" \\) -exec cat {} + | wc -w`,
-      { encoding: 'utf-8', timeout: 30_000 }
+      `find "${VAULT_ROOT}" -type f -name "*.md" -print0 | xargs -0 wc -w 2>/dev/null | tail -1`,
+      { encoding: 'utf-8', timeout: 8_000, maxBuffer: 4 * 1024 * 1024 }
     );
-    return parseInt(out.trim(), 10) || 0;
+    const n = parseInt(out.trim().split(/\s+/)[0], 10);
+    value = Number.isFinite(n) ? n : null;
   } catch {
-    return 0;
+    // Timed out or failed. null, NOT 0 — a missing measurement is not "zero
+    // words", and rendering it as 0 is the fabrication class we are removing.
+    value = null;
   }
+  _wordCount = { value, as_of: new Date().toISOString(), ts: now };
+  return value;
 }
 
 // ─────────────────────────────────────────────────────────
 // Main handler
 // ─────────────────────────────────────────────────────────
 
+// ── Response cache ──────────────────────────────────────────────────────
+//
+// This handler walks the vault synchronously (readdirSync/readFileSync across
+// Research/, agent sessions, artifacts, per-directory tree counts) plus the
+// word count. On a 65,277-note vault that measured ~29s cold / ~16s warm, so
+// every tab that opened this page waited half a minute for a number that
+// changes hourly at best. Cached with an `as_of` stamp; concurrent misses are
+// coalesced onto one computation instead of N parallel vault walks.
+const ENRICH_TTL_MS = 5 * 60_000;
+let _enrichCache: { body: unknown; ts: number } | null = null;
+let _enrichInflight: Promise<unknown> | null = null;
+
 export async function GET(_req: NextRequest) {
+  const now = Date.now();
+  if (_enrichCache && now - _enrichCache.ts < ENRICH_TTL_MS) {
+    return NextResponse.json({
+      ...(_enrichCache.body as object),
+      cached: true,
+      as_of: new Date(_enrichCache.ts).toISOString(),
+    });
+  }
+  if (!_enrichInflight) {
+    _enrichInflight = computeEnrich().finally(() => { _enrichInflight = null; });
+  }
+  const body = await _enrichInflight;
+  _enrichCache = { body, ts: Date.now() };
+  return NextResponse.json({
+    ...(body as object),
+    cached: false,
+    as_of: new Date().toISOString(),
+  });
+}
+
+async function computeEnrich(): Promise<unknown> {
   try {
     // ── (1) Research/ subdirectories ──────────────────────
     const research: Record<string, FileInfo[]> = {};
@@ -200,7 +260,8 @@ export async function GET(_req: NextRequest) {
       treeCounts[label] = countTree(join(VAULT_ROOT, relPath));
     }
 
-    return NextResponse.json({
+    // Plain object — GET() wraps it and adds cache metadata.
+    return {
       ok: true,
       vaultRoot: VAULT_ROOT,
       timestamp: new Date().toISOString(),
@@ -220,15 +281,14 @@ export async function GET(_req: NextRequest) {
       },
       totals: {
         totalFileCount,
+        // null (not 0) when the word count timed out — a missing measurement
+        // is not "zero words".
         estimatedWordCount,
         perDirectory: treeCounts,
       },
-    });
+    };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { ok: false, error: message },
-      { status: 500 }
-    );
+    return { ok: false, error: message };
   }
 }

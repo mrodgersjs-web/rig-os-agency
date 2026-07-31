@@ -30,6 +30,8 @@ interface BookingSlot {
 interface CalendarResponse {
   _real: boolean;
   _source: string;
+  /** True when the payload is a hardcoded fixture rather than a real backend read. */
+  _mock?: boolean;
   events: CalendarEvent[];
   bookings: BookingSlot[];
   weeklyStats: {
@@ -210,8 +212,12 @@ function getMockCalendar(): CalendarResponse {
   const noShows = bookings.filter((b) => b.status === "no_show").length;
 
   return {
-    _real: true,
-    _source: "Python email_calendar_manager.py calendar --json (mock data pending backend)",
+    // Was `_real: true` while _source admitted "(mock data pending backend)"
+    // in the same object. A consumer checking `_real` would have trusted it.
+    // The flag now tells the truth: this is fixture data, not a calendar.
+    _real: false,
+    _mock: true,
+    _source: "HARDCODED FIXTURE — no calendar backend is connected. Not real events.",
     events,
     bookings,
     weeklyStats: {

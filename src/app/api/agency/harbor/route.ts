@@ -144,7 +144,47 @@ function containerFor(containers: ContainerStatus[], id: string): ContainerStatu
   return containers.find((container) => container.service === id);
 }
 
+// ── Response cache ──────────────────────────────────────────────────────
+//
+// This handler makes ~17 SEQUENTIAL blocking calls: `harbor --version`,
+// `harbor doctor --check` (10s budget), `harbor defaults`, `docker ps -a`,
+// seven `harbor config get` execs, four `git` execs, plus six HTTP probes.
+// Measured end-to-end: ~35s. Every open tab paid that in full, and the page
+// simply sat there — which is the "checking…" that never resolves.
+//
+// Docker/Harbor state does not change faster than this, so the fix is the same
+// one /api/vitals already uses: cache the whole payload briefly and coalesce
+// concurrent requests onto one computation. The response carries `as_of` and
+// `cached` so the UI can show the age instead of implying it is live.
+//
+// TTL MUST COMFORTABLY EXCEED THE COMPUTE TIME. A first attempt used 30s
+// against a ~37s computation, which meant the entry had already expired by the
+// time it was written — the cache never once hit, and the route stayed at 35s
+// forever. If you shorten this, measure the handler first.
+const HARBOR_TTL_MS = 5 * 60_000;
+let _harborCache: { body: unknown; ts: number } | null = null;
+let _harborInflight: Promise<unknown> | null = null;
+
 export async function GET() {
+  const now = Date.now();
+  if (_harborCache && now - _harborCache.ts < HARBOR_TTL_MS) {
+    return NextResponse.json(
+      { ...(_harborCache.body as object), cached: true, as_of: new Date(_harborCache.ts).toISOString() },
+      { headers: { "X-Harbor-Cache": "hit" } }
+    );
+  }
+  if (!_harborInflight) {
+    _harborInflight = computeHarbor().finally(() => { _harborInflight = null; });
+  }
+  const body = await _harborInflight;
+  _harborCache = { body, ts: Date.now() };
+  return NextResponse.json(
+    { ...(body as object), cached: false, as_of: new Date().toISOString() },
+    { headers: { "X-Harbor-Cache": "miss" } }
+  );
+}
+
+async function computeHarbor() {
   const cliVersion = runHarbor(["--version"]);
   const doctor = runHarbor(["doctor", "--check"], 10_000);
   const defaults = runHarbor(["defaults"]);
@@ -240,7 +280,8 @@ export async function GET() {
         ? "partial"
         : "ready";
 
-  return NextResponse.json({
+  // Plain object — GET() wraps it, adds cache metadata, and serialises.
+  return {
     generatedAt: new Date().toISOString(),
     overall,
     exposure: "local-only",
@@ -285,5 +326,5 @@ export async function GET() {
       CAN_RUN_HARBOR ? "Host Harbor CLI is visible to this API runtime." : "Host Harbor CLI is not visible to this API runtime; endpoint probes use host.docker.internal.",
       "No tunnels are enabled by this tab.",
     ],
-  });
+  };
 }

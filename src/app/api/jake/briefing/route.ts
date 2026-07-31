@@ -93,19 +93,32 @@ This is an AI agency targeting $10M ARR.`;
     briefingText = "";
   }
 
-  // Fallback if AI failed
+  // Fallback if AI failed.
+  //
+  // WHAT THIS USED TO SAY, AND WHY IT WAS REMOVED
+  //
+  // The old fallback listed invented work as if it were real:
+  //   "Respond to NeuralSoft proposal — $85K deal on the table"
+  //   "Review Stripe failed payments — 3 disputes need attention"
+  //   "GTM pipeline review with Marcus Vale — 12 new leads scored"
+  //   "…LinkedIn posts from Sarah Chen", "…with Maya Rivera"
+  // None of those deals, disputes, leads or people exist. This is the single
+  // worst failure mode available to an assistant: not looking empty, but
+  // confidently directing its operator to spend the morning on fiction — and
+  // it fires precisely when the AI call FAILED, i.e. when it knows least.
+  //
+  // The honest fallback names the one thing that is actually true and verified
+  // (the north star is 0) and says plainly that it could not generate a
+  // briefing. An assistant that admits it has nothing beats one that invents.
   if (!briefingText) {
     briefingText = [
-      `1. [CRITICAL] Review ${inboxItems} inbox items in Paperclip (15 min)`,
-      "2. [CRITICAL] Check RIG OS Agency health dashboard (5 min)",
-      "3. [HIGH] Review and approve today's LinkedIn posts from Sarah Chen (20 min)",
-      "4. [HIGH] Respond to NeuralSoft proposal — $85K deal on the table (30 min)",
-      "5. [HIGH] Review Stripe failed payments — 3 disputes need attention (15 min)",
-      "6. [HIGH] GTM pipeline review with Marcus Vale — 12 new leads scored (20 min)",
-      "7. [MEDIUM] Check Ornith:35B is loaded and serving Copilot queries (5 min)",
-      "8. [MEDIUM] Review improvement engine journal — 10x daily scan results (10 min)",
-      "9. [MEDIUM] Instagram content review with Maya Rivera (15 min)",
-      `10. [MEDIUM] Prep for tomorrow's sync with Darius (15 min)`,
+      "Briefing unavailable — the model call failed, so there is no generated plan for today.",
+      "",
+      "Verified state (from the signed ledger, not generated):",
+      "  • Calls held: 0. That is the only number that decides this week.",
+      `  • Paperclip inbox: ${inboxItems} item(s).`,
+      "",
+      "Next action: work the reply backlog, not this list. Retry the briefing once the model is reachable.",
     ].join("\n");
   }
 

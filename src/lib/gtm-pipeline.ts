@@ -90,7 +90,12 @@ export const GTM_PIPELINE_CONFIG: GTMPipelineConfig = {
     "Cybersecurity",
   ],
   targetARR: 10_000_000,
-  currentARR: 306_000,
+  // VERIFIED: RIG is pre-revenue. This field previously read 306_000 — a
+  // fabricated $306K of ARR that fed `arrProgress` on the GTM surface and
+  // contradicted /api/agency/goals ("arr": 0) and the signed ledger in the
+  // same breath. There is no revenue. Do not put a number here that is not
+  // sourced from an artifact; see src/lib/truth.ts.
+  currentARR: 0,
   pipelineTarget: 2_000_000,
   profilesPerNight: 200,
   cadenceDays: [1, 3, 7, 14, 21], // Mon, Wed, following Mon, etc.

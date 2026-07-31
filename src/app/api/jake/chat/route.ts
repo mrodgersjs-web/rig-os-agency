@@ -146,18 +146,26 @@ Respond concisely. Max 3 paragraphs. Be specific and actionable.`;
     }
   } catch {}
 
-  // Fallback responses
-  const lower = message.toLowerCase();
-  if (lower.includes("status")) {
-    return "All systems nominal. Governor is active, monitoring 47 agents across 7 departments. GTM engine is running, LinkedIn pipeline producing 3 posts/day. No critical alerts.";
-  }
-  if (lower.includes("approv")) {
-    return "3 items pending approval: (1) LinkedIn post batch from Sarah Chen, (2) NeuralSoft proposal revision, (3) Stripe billing template update. Want me to walk through them?";
-  }
-  if (lower.includes("agent")) {
-    return "47 agents registered. Key actives: Sarah Chen (LinkedIn), Marcus Vale (GTM), Darius (engineering), Maya Rivera (Instagram). All healthy. The fleet is running hot.";
-  }
-  return "I'm online but the LLM backend is taking a moment. Try again in a few seconds, or check the VoiceBox Ops page for system health.";
+  // ── Fallback when the model is unreachable ────────────────────────
+  //
+  // These used to be confident, specific, and entirely invented:
+  //   "All systems nominal … monitoring 47 agents across 7 departments"
+  //   "3 items pending approval: (1) LinkedIn post batch from Sarah Chen,
+  //    (2) NeuralSoft proposal revision, (3) Stripe billing template update"
+  //   "47 agents registered. Key actives: Sarah Chen, Marcus Vale, Darius…"
+  //
+  // No such agents, approvals, deals or people exist. And note WHEN they
+  // fired: only after the LLM call had already failed. The assistant was at
+  // its least informed and its most assertive at exactly the same moment.
+  //
+  // A fallback must degrade to "I don't know", never to a plausible answer.
+  // If the model is down, say the model is down.
+  return (
+    "I can't answer that right now — the model backend is unreachable, and I " +
+    "won't guess at system state I cannot read.\n\n" +
+    "Verified numbers are on Today (/) and /api/agency/truth, which read the " +
+    "signed ledger directly and do not depend on me."
+  );
 }
 
 export async function POST(req: Request) {

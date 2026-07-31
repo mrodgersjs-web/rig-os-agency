@@ -323,8 +323,13 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    _real: true,
-    _source: "internal lead scoring database (15 scored leads, 10 verticals)",
+    // Was `_real: true` + "internal lead scoring database". There is no such
+    // database: LEADS_DATABASE at the top of this file is a hardcoded array of
+    // invented people (Sarah Chen / TechFlow SaaS, etc). The pipeline value it
+    // summed to ($958,000) was fiction reported as fact.
+    _real: false,
+    _mock: true,
+    _source: "HARDCODED FIXTURE (LEADS_DATABASE in this file) — invented leads, not scored prospects.",
     generated_at: new Date().toISOString(),
     summary: {
       total,

@@ -1,55 +1,82 @@
 /* ─────────────────────────────────────────────────────────────────────
-   RIG OS — Light Theme Design System
-   Notion-inspired warmth with RIG gold/emerald/cream palette
+   RIG OS — chrome palette (Midnight Aubergine)
+   ─────────────────────────────────────────────────────────────────────
+
+   THIS FILE USED TO BE A LIGHT THEME, AND IT WAS THE "SECOND AESTHETIC".
+
+   The app had two design languages fighting each other in the same paint:
+     • CHROME  — Shell, Sidebar, TopBar, DetailPanel, DataTable, breadcrumbs
+                 (31 files) read these --rig-* tokens, which were LIGHT
+                 (--rig-bg #FAFAF8, --rig-sidebar #F4F2EE, white cards).
+     • CONTENT — 75 pages under src/app read the Midnight Aubergine tokens
+                 from globals.css (--bg-deep #15101a, --cream #f3ebda).
+
+   globals.css loads AFTER this file, so --cream stayed pale cream while
+   Shell kept painting a near-white canvas underneath it. Measured in the
+   browser: Shell root background rgb(250,250,248) with inherited text
+   rgb(243,235,218) — pale cream on off-white. Most of the app's body copy
+   was effectively unreadable, which is what made the whole surface look
+   washed out and unfinished.
+
+   The design language is DARK: near-black ground, warm gold accents, serif
+   display headings. So the --rig-* names are KEPT (31 files reference them;
+   renaming would be a large, risky diff) but their VALUES now resolve to
+   Midnight Aubergine. One edit, and the chrome matches the content.
+
+   If you want a real light mode later, do it properly with a [data-theme]
+   attribute and define BOTH sets — do not reintroduce a permanently-light
+   palette underneath dark text.
    ───────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* ── Light Theme Palette ── */
-  --rig-bg:          #FAFAF8;   /* warm off-white — main background */
-  --rig-sidebar:     #F4F2EE;   /* warm light gray — sidebar */
-  --rig-card:        #FFFFFF;   /* pure white — cards and panels */
-  --rig-elevated:    #FFFFFF;   /* elevated surfaces */
-  --rig-hover:       #ECE9E4;   /* hover background */
-  --rig-active:      #E3DFD8;   /* active/selected background */
+  /* ── Chrome palette — Midnight Aubergine (matches globals.css) ── */
+  --rig-bg:          #15101a;   /* near-black ground — the app canvas */
+  --rig-sidebar:     #1c1622;   /* sidebar, one step up from the ground */
+  --rig-card:        #251d2c;   /* cards and panels */
+  --rig-elevated:    #2e2436;   /* elevated surfaces */
+  --rig-hover:       #2e2436;   /* hover background */
+  --rig-active:      #372c41;   /* active/selected background */
 
-  --rig-text:        #2D2438;   /* primary text — RIG deep purple darkened */
-  --rig-text-2:      #4A4356;   /* secondary text */
-  --rig-text-3:      #6B6478;   /* tertiary text */
-  --rig-text-mute:   #9B94A8;   /* muted text */
+  --rig-text:        #f3ebda;   /* primary text — cream */
+  --rig-text-2:      #ddd0bb;   /* secondary text */
+  --rig-text-3:      #a59783;   /* tertiary text */
+  --rig-text-mute:   #6e6353;   /* muted text */
 
-  --rig-border:      #E8E5DF;   /* standard border */
-  --rig-border-soft: #F0EEE9;   /* subtle border */
+  --rig-border:      rgba(212, 165, 116, 0.20);  /* gold-tinted hairline */
+  --rig-border-soft: rgba(243, 235, 218, 0.08);  /* subtle border */
 
-  --rig-gold:        #C4904A;   /* RIG gold — muted for light */
-  --rig-gold-soft:   #D4A574;   /* RIG gold — hover/active */
-  --rig-gold-bg:     #F5EDE0;   /* gold tint background */
-  
-  --rig-emerald:     #4A9D7E;   /* RIG emerald — slightly darkened */
-  --rig-emerald-bg:  #E8F3EE;   /* emerald tint background */
-  
-  --rig-plum:        #B85675;   /* RIG plum — lightened */
-  --rig-plum-bg:     #F8E8EE;   /* plum tint background */
+  --rig-gold:        #d4a574;   /* RIG gold */
+  --rig-gold-soft:   #e6c69a;   /* RIG gold — hover/active */
+  --rig-gold-bg:     rgba(212, 165, 116, 0.10);  /* gold tint background */
 
-  --rig-blue:        #2563EB;   /* links and accents */
-  --rig-blue-bg:     #EFF4FE;
+  --rig-emerald:     #5ab896;   /* RIG emerald */
+  --rig-emerald-bg:  rgba(90, 184, 150, 0.12);   /* emerald tint background */
+
+  --rig-plum:        #c4607e;   /* RIG plum */
+  --rig-plum-bg:     rgba(196, 96, 126, 0.12);   /* plum tint background */
+
+  /* No blue in Midnight Aubergine — map onto gold so links stay in-language. */
+  --rig-blue:        #d4a574;
+  --rig-blue-bg:     rgba(212, 165, 116, 0.10);
 
   /* ── Status Colors ── */
-  --rig-red:         #D14545;   /* critical / error */
-  --rig-red-bg:      #FCEAEA;
-  --rig-orange:      #DB7633;   /* high priority / warning */
-  --rig-orange-bg:   #FCF0E6;
-  --rig-yellow:      #C4904A;   /* medium priority */
-  --rig-yellow-bg:   #F5EDE0;
-  --rig-green:       #4A9D7E;   /* success / done */
-  --rig-green-bg:    #E8F3EE;
-  --rig-purple:      #7C3AED;   /* info / special */
-  --rig-purple-bg:   #F0EAFC;
+  --rig-red:         #c4607e;   /* critical / error — plum */
+  --rig-red-bg:      rgba(196, 96, 126, 0.12);
+  --rig-orange:      #c97c5e;   /* high priority / warning — rust */
+  --rig-orange-bg:   rgba(201, 124, 94, 0.12);
+  --rig-yellow:      #d4a574;   /* medium priority — gold */
+  --rig-yellow-bg:   rgba(212, 165, 116, 0.10);
+  --rig-green:       #5ab896;   /* success / done — emerald */
+  --rig-green-bg:    rgba(90, 184, 150, 0.12);
+  --rig-purple:      #e6c69a;   /* info / special — gold-soft */
+  --rig-purple-bg:   rgba(230, 198, 154, 0.10);
 
   /* ── Shadows ── */
-  --rig-shadow-sm:   0 1px 2px rgba(0,0,0,0.04);
-  --rig-shadow:      0 2px 8px rgba(0,0,0,0.06);
-  --rig-shadow-lg:   0 8px 24px rgba(0,0,0,0.08);
-  --rig-shadow-xl:   0 16px 48px rgba(0,0,0,0.10);
+  /* Deeper shadows — on a near-black ground a 4% shadow is invisible. */
+  --rig-shadow-sm:   0 1px 2px rgba(0,0,0,0.35);
+  --rig-shadow:      0 2px 8px rgba(0,0,0,0.45);
+  --rig-shadow-lg:   0 8px 24px rgba(0,0,0,0.50);
+  --rig-shadow-xl:   0 16px 48px rgba(0,0,0,0.55);
 
   /* ── Spacing ── */
   --rig-radius:      8px;

@@ -17,7 +17,31 @@ export interface Deal {
   updatedAt: string;
 }
 
-export const SEED_DEALS: Deal[] = [
+// ── DEMO DATA — OFF BY DEFAULT ─────────────────────────────────────────
+//
+// EVERY DEAL BELOW IS FABRICATED. This was the most dangerous fabrication in
+// the app, because it did not merely look busy — it reported REVENUE:
+//
+//   /api/agency/pipeline-deals → totalValue 630000, closedValue 35000
+//   /agency/pipeline-kanban    → "8 deals · $630K open · $35K closed"
+//   /agency/velocity           → closedWonValue 35000
+//
+// "Kohler Ventures / Ari Kohler" carries stage:"closed", which renders as
+// $35K CLOSED WON. RIG's verified state is $0 revenue and 0 signed contracts.
+// A buyer — or Mike — reading that page would see a company that has closed
+// business it has never closed.
+//
+// Worse, these names leaked into the assistant: /api/jake/briefing told the
+// operator to "Respond to NeuralSoft proposal — $85K deal on the table". That
+// is an AI instructing its user to act on a deal that does not exist.
+//
+// Gated to [] unless RIG_DEMO_DATA=1, exactly like SEED_* in agency-data.ts.
+// An empty pipeline is honest; a fake closed-won is not.
+
+/** Demo data is opt-in. Default OFF. */
+const DEMO_ENABLED = process.env.RIG_DEMO_DATA === "1";
+
+const DEMO_DEALS: Deal[] = [
   { id: "d-001", clientName: "VantagePoint Capital Partners", contact: "Sarah Chen", dealValue: 45000, stage: "proposal", source: "LinkedIn Outreach", notes: "AI workflow audit + dashboard build", createdAt: "2026-06-28T14:00:00Z", updatedAt: "2026-06-28T14:00:00Z" },
   { id: "d-002", clientName: "Kohler Ventures", contact: "Ari Kohler", dealValue: 35000, stage: "closed", source: "Referral", notes: "GTM pipeline + scraping infra", createdAt: "2026-06-15T09:00:00Z", updatedAt: "2026-06-20T16:00:00Z" },
   { id: "d-003", clientName: "Rig Research", contact: "Mike Rodgers", dealValue: 18000, stage: "negotiation", source: "Inbound", notes: "Agency OS platform retainer", createdAt: "2026-07-01T11:00:00Z", updatedAt: "2026-07-01T11:00:00Z" },
@@ -27,6 +51,9 @@ export const SEED_DEALS: Deal[] = [
   { id: "d-007", clientName: "ScaleUp Labs", contact: "Nina Patel", dealValue: 67000, stage: "qualified", source: "LinkedIn Outreach", notes: "Pitch deck automation + investor CRM", createdAt: "2026-06-27T13:00:00Z", updatedAt: "2026-06-27T13:00:00Z" },
   { id: "d-008", clientName: "BioMetric Systems", contact: "Amy Liu", dealValue: 75000, stage: "proposal", source: "Inbound", notes: "Computer vision pipeline + dashboard", createdAt: "2026-06-29T12:00:00Z", updatedAt: "2026-06-29T12:00:00Z" },
 ];
+
+/** Gated export. Empty unless RIG_DEMO_DATA=1. */
+export const SEED_DEALS: Deal[] = DEMO_ENABLED ? DEMO_DEALS : [];
 
 // Session-scoped mutable store
 let deals: Deal[] = [...SEED_DEALS];
