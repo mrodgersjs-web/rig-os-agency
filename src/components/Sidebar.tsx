@@ -73,6 +73,10 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: "Growth",
     items: [
       { href: "/rig-gtm", label: "GTM Studio", icon: Rocket },
+      { href: "/agency/gtm-live", label: "GTM Live (fires)", icon: Radio, accent: "var(--emerald)" },
+      { href: "/agency/replies", label: "Reply Firecards", icon: MessageSquare, accent: "var(--rust)" },
+      { href: "/agency/jake", label: "Jake Decisions", icon: Brain, accent: "var(--plum)" },
+      { href: "/agency/scorecard", label: "KPI Scorecard", icon: Gauge, accent: "var(--gold)" },
       { href: "/agency/gtm-engine", label: "GTM Engine", icon: Gauge, accent: "var(--gold)" },
       { href: "/agency/gtm-pipeline", label: "GTM Pipeline", icon: GitBranch },
       { href: "/agency/gtm-real", label: "GTM Real (V2)", icon: Radio, accent: "var(--emerald)" },
