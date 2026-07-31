@@ -53,14 +53,23 @@ function loadLeads(): { leads: FeedLead[]; meta: Record<string, any> } {
 const LEADS_DATABASE: FeedLead[] = loadLeads().leads;
 const LEADS_META = loadLeads().meta;
 
+// Fallback only. These thresholds were written against the fabricated leads this
+// route used to serve, which scored 87-92; real FitScores top out at 64.8, so
+// applying them to honest data marks all 330 people cold and empties the queue.
 function tierFromScore(score: number): "hot" | "warm" | "cold" {
   if (score >= 80) return "hot";
   if (score >= 70) return "warm";
   return "cold";
 }
 
-// Augment leads with tier
-const enrichedLeads = LEADS_DATABASE.map((l) => ({ ...l, tier: tierFromScore(l.score) }));
+// The feed carries a tier derived from the scorer's OWN band (A/B/…), which is
+// calibrated to the real score distribution. Trust it when present and fall back to
+// the legacy threshold only for a row that predates the field — recomputing here
+// would silently overwrite the calibrated grade with the fixture-era one.
+const enrichedLeads = LEADS_DATABASE.map((l) => ({
+  ...l,
+  tier: l.tier ?? tierFromScore(l.score),
+}));
 
 function safeRead(path: string): string | null {
   try {
