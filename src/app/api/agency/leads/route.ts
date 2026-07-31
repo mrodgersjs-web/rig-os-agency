@@ -9,188 +9,49 @@ const GTM_STUDIO_ROOT = "/Users/rig128gb/Developer/rig-gtm-studio-v2";
 const CLIENTS_DIR = join(GTM_STUDIO_ROOT, "clients");
 
 // ── Real lead data (12 fully-scored leads across 8 verticals) ─────────────
-const LEADS_DATABASE = [
-  {
-    id: "L001", name: "Sarah Chen", title: "VP Engineering", company: "TechFlow SaaS",
-    industry: "SaaS", employees: 240, arr: 12_000_000, geography: "Austin, TX",
-    linkedinUrl: "https://linkedin.com/in/sarah-chen-techflow",
-    painPoints: ["scaling infra", "cost optimization", "DevOps maturity"],
-    score: 87, tier: "hot", stage: "proposal_sent", source: "LinkedIn",
-    enrichedAt: "2026-06-18", lastContactAt: "2026-07-04",
-    emailsSent: 3, emailsOpened: 3, emailsReplied: 2, meetingsBooked: 1,
-    proposalsSent: 1, contractsSigned: 0, value: 48_000,
-    scoreBreakdown: { fit: 90, intent: 85, engagement: 88, timing: 85, authority: 88 },
-    nextAction: "Send proposal follow-up", nextActionDate: "2026-07-08",
-  },
-  {
-    id: "L002", name: "Marcus Webb", title: "CTO", company: "FinEdge",
-    industry: "FinTech", employees: 85, arr: 4_500_000, geography: "New York, NY",
-    linkedinUrl: "https://linkedin.com/in/marcus-webb-finedge",
-    painPoints: ["compliance automation", "data pipeline", "SOC 2 prep"],
-    score: 92, tier: "hot", stage: "meeting_booked", source: "Referral",
-    enrichedAt: "2026-06-12", lastContactAt: "2026-07-03",
-    emailsSent: 2, emailsOpened: 2, emailsReplied: 2, meetingsBooked: 1,
-    proposalsSent: 0, contractsSigned: 0, value: 78_000,
-    scoreBreakdown: { fit: 95, intent: 92, engagement: 90, timing: 92, authority: 92 },
-    nextAction: "Prep for Thursday meeting", nextActionDate: "2026-07-10",
-  },
-  {
-    id: "L003", name: "Dr. Emily Rodriguez", title: "CMO", company: "HealthBridge",
-    industry: "HealthTech", employees: 410, arr: 22_000_000, geography: "Boston, MA",
-    linkedinUrl: "https://linkedin.com/in/emily-rodriguez-cmo",
-    painPoints: ["patient data sync", "AI diagnostics", "HIPAA marketing"],
-    score: 81, tier: "hot", stage: "engaged", source: "Cold Email",
-    enrichedAt: "2026-06-08", lastContactAt: "2026-07-02",
-    emailsSent: 4, emailsOpened: 3, emailsReplied: 1, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 96_000,
-    scoreBreakdown: { fit: 84, intent: 78, engagement: 80, timing: 82, authority: 82 },
-    nextAction: "Schedule discovery call", nextActionDate: "2026-07-07",
-  },
-  {
-    id: "L004", name: "James Park", title: "Head Ops", company: "ShipRight",
-    industry: "Logistics", employees: 320, arr: 18_000_000, geography: "Seattle, WA",
-    linkedinUrl: "https://linkedin.com/in/james-park-shipright",
-    painPoints: ["route optimization", "real-time tracking", "warehouse automation"],
-    score: 76, tier: "warm", stage: "contacted", source: "Apify",
-    enrichedAt: "2026-06-22", lastContactAt: "2026-06-29",
-    emailsSent: 2, emailsOpened: 1, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 62_000,
-    scoreBreakdown: { fit: 78, intent: 74, engagement: 70, timing: 76, authority: 82 },
-    nextAction: "Send follow-up #2", nextActionDate: "2026-07-06",
-  },
-  {
-    id: "L005", name: "Lisa Tran", title: "CEO", company: "EduScale",
-    industry: "EdTech", employees: 55, arr: 3_200_000, geography: "San Francisco, CA",
-    linkedinUrl: "https://linkedin.com/in/lisa-tran-eduscale",
-    painPoints: ["content generation", "student analytics", "AI tutoring"],
-    score: 89, tier: "hot", stage: "negotiation", source: "LinkedIn",
-    enrichedAt: "2026-05-28", lastContactAt: "2026-07-05",
-    emailsSent: 5, emailsOpened: 5, emailsReplied: 4, meetingsBooked: 2,
-    proposalsSent: 1, contractsSigned: 0, value: 84_000,
-    scoreBreakdown: { fit: 90, intent: 92, engagement: 92, timing: 84, authority: 88 },
-    nextAction: "Close contract terms", nextActionDate: "2026-07-08",
-  },
-  {
-    id: "L006", name: "David Okafor", title: "VP Product", company: "ShopWave",
-    industry: "E-commerce", employees: 180, arr: 9_500_000, geography: "London, UK",
-    linkedinUrl: "https://linkedin.com/in/david-okafor-shopwave",
-    painPoints: ["personalization engine", "cart abandonment", "mobile checkout"],
-    score: 84, tier: "hot", stage: "enriched", source: "Exa",
-    enrichedAt: "2026-07-01", lastContactAt: null,
-    emailsSent: 0, emailsOpened: 0, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 55_000,
-    scoreBreakdown: { fit: 86, intent: 82, engagement: 80, timing: 84, authority: 88 },
-    nextAction: "Send first-touch email", nextActionDate: "2026-07-07",
-  },
-  {
-    id: "L007", name: "Rachel Kim", title: "Founder", company: "PropTech AI",
-    industry: "Real Estate", employees: 18, arr: 950_000, geography: "Miami, FL",
-    linkedinUrl: "https://linkedin.com/in/rachel-kim-proptech",
-    painPoints: ["property valuation AI", "lead routing", "CRM integration"],
-    score: 79, tier: "warm", stage: "prospect", source: "Apify",
-    enrichedAt: "2026-07-02", lastContactAt: null,
-    emailsSent: 0, emailsOpened: 0, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 42_000,
-    scoreBreakdown: { fit: 82, intent: 76, engagement: 78, timing: 80, authority: 80 },
-    nextAction: "Research + sequence", nextActionDate: "2026-07-08",
-  },
-  {
-    id: "L008", name: "Tom Anderson", title: "Dir Mfg", company: "ForgeWorks",
-    industry: "Manufacturing", employees: 540, arr: 38_000_000, geography: "Detroit, MI",
-    linkedinUrl: "https://linkedin.com/in/tom-anderson-forgeworks",
-    painPoints: ["predictive maintenance", "IoT data pipeline", "ERP integration"],
-    score: 85, tier: "hot", stage: "closed_won", source: "Referral",
-    enrichedAt: "2026-05-15", lastContactAt: "2026-07-04",
-    emailsSent: 6, emailsOpened: 6, emailsReplied: 5, meetingsBooked: 3,
-    proposalsSent: 2, contractsSigned: 1, value: 120_000,
-    scoreBreakdown: { fit: 88, intent: 86, engagement: 92, timing: 80, authority: 80 },
-    nextAction: "Kickoff call", nextActionDate: "2026-07-12",
-  },
-  {
-    id: "L009", name: "Aisha Patel", title: "CISO", company: "SecureNet",
-    industry: "Cybersecurity", employees: 95, arr: 6_800_000, geography: "Washington, DC",
-    linkedinUrl: "https://linkedin.com/in/aisha-patel-securenet",
-    painPoints: ["threat detection", "automated response", "zero-trust"],
-    score: 91, tier: "hot", stage: "meeting_booked", source: "Cold Email",
-    enrichedAt: "2026-06-15", lastContactAt: "2026-07-05",
-    emailsSent: 3, emailsOpened: 3, emailsReplied: 2, meetingsBooked: 1,
-    proposalsSent: 0, contractsSigned: 0, value: 95_000,
-    scoreBreakdown: { fit: 92, intent: 90, engagement: 92, timing: 88, authority: 92 },
-    nextAction: "Send agenda + deck", nextActionDate: "2026-07-06",
-  },
-  {
-    id: "L010", name: "Michael Chang", title: "CTO", company: "NeuralScale",
-    industry: "AI/ML", employees: 42, arr: 2_400_000, geography: "Palo Alto, CA",
-    linkedinUrl: "https://linkedin.com/in/michael-chang-neuralscale",
-    painPoints: ["model deployment", "MLOps pipeline", "GPU cost"],
-    score: 88, tier: "hot", stage: "engaged", source: "LinkedIn",
-    enrichedAt: "2026-06-19", lastContactAt: "2026-07-03",
-    emailsSent: 4, emailsOpened: 4, emailsReplied: 2, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 88_000,
-    scoreBreakdown: { fit: 90, intent: 88, engagement: 86, timing: 88, authority: 88 },
-    nextAction: "Schedule technical demo", nextActionDate: "2026-07-09",
-  },
-  {
-    id: "L011", name: "Olivia Martinez", title: "Head Growth", company: "MealKit Pro",
-    industry: "E-commerce", employees: 230, arr: 14_500_000, geography: "Los Angeles, CA",
-    linkedinUrl: "https://linkedin.com/in/olivia-martinez-mealkit",
-    painPoints: ["subscriber retention", "LTV optimization", "referral loops"],
-    score: 72, tier: "warm", stage: "contacted", source: "LinkedIn",
-    enrichedAt: "2026-06-25", lastContactAt: "2026-07-01",
-    emailsSent: 2, emailsOpened: 1, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 48_000,
-    scoreBreakdown: { fit: 74, intent: 70, engagement: 68, timing: 74, authority: 74 },
-    nextAction: "Send value-prop email", nextActionDate: "2026-07-07",
-  },
-  {
-    id: "L012", name: "Henrik Larsen", title: "VP Sales", company: "CloudStack",
-    industry: "SaaS", employees: 410, arr: 24_000_000, geography: "Copenhagen, DK",
-    linkedinUrl: "https://linkedin.com/in/henrik-larsen-cloudstack",
-    painPoints: ["outbound automation", "SDR productivity", "CRM hygiene"],
-    score: 67, tier: "cold", stage: "prospect", source: "Apify",
-    enrichedAt: "2026-06-30", lastContactAt: null,
-    emailsSent: 0, emailsOpened: 0, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 72_000,
-    scoreBreakdown: { fit: 70, intent: 64, engagement: 64, timing: 68, authority: 70 },
-    nextAction: "Wait for trigger event", nextActionDate: "2026-07-15",
-  },
-  {
-    id: "L013", name: "Priya Subramanian", title: "Director Ops", company: "TalentForge",
-    industry: "EdTech", employees: 130, arr: 7_200_000, geography: "Toronto, ON",
-    linkedinUrl: "https://linkedin.com/in/priya-talentforge",
-    painPoints: ["candidate matching AI", "ATS integration", "diversity hiring"],
-    score: 74, tier: "warm", stage: "enriched", source: "Cold Email",
-    enrichedAt: "2026-07-02", lastContactAt: null,
-    emailsSent: 0, emailsOpened: 0, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 54_000,
-    scoreBreakdown: { fit: 76, intent: 72, engagement: 72, timing: 74, authority: 76 },
-    nextAction: "Send first-touch", nextActionDate: "2026-07-08",
-  },
-  {
-    id: "L014", name: "Carlos Mendoza", title: "CMO", company: "VerdeEnergy",
-    industry: "Manufacturing", employees: 285, arr: 16_500_000, geography: "Mexico City, MX",
-    linkedinUrl: "https://linkedin.com/in/carlos-mendoza-verde",
-    painPoints: ["B2B brand", "lead generation", "ABM programs"],
-    score: 82, tier: "hot", stage: "engaged", source: "Referral",
-    enrichedAt: "2026-06-10", lastContactAt: "2026-07-04",
-    emailsSent: 3, emailsOpened: 3, emailsReplied: 2, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 78_000,
-    scoreBreakdown: { fit: 84, intent: 82, engagement: 82, timing: 80, authority: 82 },
-    nextAction: "Book discovery", nextActionDate: "2026-07-08",
-  },
-  {
-    id: "L015", name: "Sophie Chen", title: "Head Product", company: "CryptoVault",
-    industry: "FinTech", employees: 68, arr: 4_100_000, geography: "Singapore",
-    linkedinUrl: "https://linkedin.com/in/sophie-chen-cryptovault",
-    painPoints: ["custody UX", "compliance dashboards", "regulatory reporting"],
-    score: 71, tier: "warm", stage: "contacted", source: "LinkedIn",
-    enrichedAt: "2026-06-20", lastContactAt: "2026-06-30",
-    emailsSent: 1, emailsOpened: 1, emailsReplied: 0, meetingsBooked: 0,
-    proposalsSent: 0, contractsSigned: 0, value: 58_000,
-    scoreBreakdown: { fit: 72, intent: 70, engagement: 68, timing: 72, authority: 72 },
-    nextAction: "Send follow-up #1", nextActionDate: "2026-07-06",
-  },
-];
+// ── Real leads, read at request time ─────────────────────────────────────
+// Until 2026-07-31 this was a hardcoded array of INVENTED people ("Sarah Chen,
+// VP Engineering, TechFlow SaaS"; "Marcus Webb, CTO, FinEdge") whose `value` and
+// `closed_won` rows produced a "Won Value" tile and an "N contracts signed"
+// caption on the operator's own dashboard. RIG has signed none. The footer
+// called it "internal lead scoring DB".
+//
+// The feed is now generated by `outbound.agency_leads_feed` in rig-gtm-studio-v2
+// from the 330-person named ICP registry, scored by the real
+// `outbound.icp_registry.fit_score` (FitScore incl. committee tax). Fields the
+// registry does not carry — headcount, revenue, geography — arrive as null and
+// MUST render as "unknown" rather than 0. Deal value and contracts signed are 0
+// because none exist; a speculative value on an uncontacted prospect is the same
+// fabrication in a different currency.
+//
+// Missing feed => empty list. An honest zero beats an invented pipeline.
+const LEADS_FEED_PATH = join(GTM_STUDIO_ROOT, "out", "agency", "leads-feed.json");
+
+type FeedLead = Record<string, any>;
+
+function loadLeads(): { leads: FeedLead[]; meta: Record<string, any> } {
+  try {
+    if (!existsSync(LEADS_FEED_PATH)) {
+      return { leads: [], meta: { source: null, error: "leads-feed.json not generated" } };
+    }
+    const parsed = JSON.parse(readFileSync(LEADS_FEED_PATH, "utf-8"));
+    return {
+      leads: Array.isArray(parsed.leads) ? parsed.leads : [],
+      meta: {
+        source: parsed.source ?? null,
+        scorer: parsed.scorer ?? null,
+        generated_at: parsed.generated_at ?? null,
+        unknown_fields: parsed.unknown_fields ?? [],
+        note: parsed.note ?? null,
+      },
+    };
+  } catch (e) {
+    return { leads: [], meta: { source: null, error: String(e) } };
+  }
+}
+
+const LEADS_DATABASE: FeedLead[] = loadLeads().leads;
+const LEADS_META = loadLeads().meta;
 
 function tierFromScore(score: number): "hot" | "warm" | "cold" {
   if (score >= 80) return "hot";
@@ -323,13 +184,20 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    // Was `_real: true` + "internal lead scoring database". There is no such
-    // database: LEADS_DATABASE at the top of this file is a hardcoded array of
-    // invented people (Sarah Chen / TechFlow SaaS, etc). The pipeline value it
-    // summed to ($958,000) was fiction reported as fact.
-    _real: false,
-    _mock: true,
-    _source: "HARDCODED FIXTURE (LEADS_DATABASE in this file) — invented leads, not scored prospects.",
+    // History, kept so this cannot quietly revert: `_real: true` once sat above a
+    // hardcoded array of invented people (Sarah Chen / TechFlow SaaS, ...) summing
+    // to a $958,000 pipeline and an "N contracts signed" tile. That was fiction
+    // reported as fact on the operator's own decision surface. The rows are now
+    // read from the real named ICP registry, scored by the real FitScore.
+    _real: LEADS_DATABASE.length > 0,
+    _mock: false,
+    _source: LEADS_META.source
+      ? `${LEADS_META.source} via ${LEADS_META.scorer} (generated ${LEADS_META.generated_at})`
+      : `NO DATA — ${LEADS_META.error ?? "leads feed missing"}. Regenerate with: `
+        + `python3 -m outbound.agency_leads_feed`,
+    // Named so a null renders as "unknown" and never as a zero the reader trusts.
+    _unknown_fields: LEADS_META.unknown_fields ?? [],
+    _note: LEADS_META.note ?? null,
     generated_at: new Date().toISOString(),
     summary: {
       total,

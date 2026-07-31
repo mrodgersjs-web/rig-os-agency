@@ -82,6 +82,14 @@ interface Lead {
 }
 
 interface LeadsPayload {
+  /** Provenance from the API. Rendered verbatim in the footer — the UI must never
+      restate the data source in its own words, which is how "internal lead scoring DB"
+      outlived the fixture it described. */
+  _source?: string;
+  _real?: boolean;
+  /** Fields the registry does not carry (headcount, revenue, geography). They arrive
+      as null and must render as "unknown" — a 0 here reads as a fact nobody measured. */
+  _unknown_fields?: string[];
   summary: {
     total: number; hot: number; warm: number; cold: number;
     totalPipelineValue: number; hotPipelineValue: number;
@@ -448,7 +456,11 @@ export default function LeadScoringPage() {
         display: "flex", justifyContent: "space-between", alignItems: "center",
         fontSize: 11, color: C.textMute, flexWrap: "wrap", gap: 8,
       }}>
-        <span>Data source: <span style={{ fontFamily: "monospace", color: C.text3 }}>internal lead scoring DB</span> · 15 leads · 10 verticals</span>
+        {/* Reads the API's own provenance rather than restating it. The literal
+            "internal lead scoring DB" sat here while the API underneath had already
+            been labelled a HARDCODED FIXTURE — the UI was the last place still
+            claiming the invented rows were real. Never hardcode this string again. */}
+        <span>Data source: <span style={{ fontFamily: "monospace", color: C.text3 }}>{data?._source ?? "unknown"}</span>{typeof data?.summary?.total === "number" ? ` · ${data.summary.total} leads` : ""}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Activity size={11} style={{ color: C.gold }} /> Doctrine: Hot ≥ 80 · Warm ≥ 70 · Cold &lt; 70
         </span>
