@@ -1,3 +1,5 @@
+> Part of the [mrodgersjs-web](https://github.com/mrodgersjs-web) FDE studio fleet — control planes, gates, fleets, proof. See [docs/public-boundary.md](docs/public-boundary.md).
+
 # 🦞 Agentic OS
 
 > A beautiful local command centre for your AI agents.
