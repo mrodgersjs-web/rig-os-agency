@@ -166,7 +166,7 @@ export async function GET() {
       mvpCardExists,
     },
     docker: {
-      composeExists,
+      composeExists: dockerComposeExists,
       containerHealth: dockerHealth,
     },
     prefect: {
