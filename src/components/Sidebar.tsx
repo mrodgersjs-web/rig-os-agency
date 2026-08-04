@@ -25,6 +25,13 @@ interface NavItem {
   children?: NavItem[];
 }
 
+export interface SidebarInjectedNavItem {
+  href: string;
+  icon: "book-open";
+  label: string;
+  section: "overview";
+}
+
 const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
@@ -85,7 +92,10 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/agency/retention", label: "Retention", icon: Shield, accent: "var(--gold)" },
       { href: "/agency/velocity", label: "Velocity", icon: Gauge, accent: "var(--emerald)" },
       { href: "/rig-linkedin", label: "LinkedIn", icon: Users },
-      { href: "/rig-instagram", label: "Instagram", icon: Camera },
+      { href: "/rig-instagram", label: "Instagram", icon: Camera, children: [
+        { href: "/rig-instagram", label: "Instagram Studio", icon: Camera },
+        { href: "/rig-instagram/commercial-lane", label: "Commercial Lane", icon: Activity },
+      ]},
       { href: "/agency/outreach", label: "Outreach", icon: Mail },
       { href: "/agency/outreach-live", label: "Outreach Live", icon: MailOpen, accent: "var(--emerald)" },
       { href: "/agency/email-tracking", label: "Email Tracking", icon: MailOpen },
@@ -100,6 +110,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "Intelligence",
     items: [
+      { href: "/agency/intelligence", label: "Daily Intelligence", icon: Brain, accent: "var(--gold)" },
       { href: "/agency/agents", label: "Agents", icon: Bot, badge: 410, children: [
         { href: "/agency/agents/catalog/list", label: "Catalog", icon: BookOpen },
         { href: "/agency/agents/departments/list", label: "Departments", icon: Users },
@@ -156,10 +167,41 @@ const NAV: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-export default function Sidebar() {
+function resolveInjectedIcon(icon: SidebarInjectedNavItem["icon"]): LucideIcon {
+  switch (icon) {
+    case "book-open":
+      return BookOpen;
+  }
+}
+
+function buildNav(injectedItem?: SidebarInjectedNavItem | null): { label: string; items: NavItem[] }[] {
+  const nav = NAV.map((group) => ({ ...group, items: [...group.items] }));
+
+  if (!injectedItem) {
+    return nav;
+  }
+
+  if (injectedItem.section === "overview") {
+    nav[0]?.items.push({
+      href: injectedItem.href,
+      icon: resolveInjectedIcon(injectedItem.icon),
+      label: injectedItem.label,
+    });
+  }
+
+  return nav;
+}
+
+function isNavActive(pathname: string, href: string) {
+  if (href === "/" || href === "/agency") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export default function Sidebar({ learningNavItem }: { learningNavItem?: SidebarInjectedNavItem | null }) {
   const pathname = usePathname();
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [collapsedItems, setCollapsedItems] = useState<Set<string>>(new Set());
+  const nav = buildNav(learningNavItem);
 
   const toggleGroup = (label: string) => {
     setCollapsedGroups(prev => {
@@ -226,7 +268,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="px-2 flex-1 pb-3">
-        {NAV.map((group) => {
+        {nav.map((group) => {
           const isGroupCollapsed = collapsedGroups.has(group.label);
           return (
             <div key={group.label} className="mb-0.5">
@@ -243,7 +285,7 @@ export default function Sidebar() {
                 </span>
               </button>
               {!isGroupCollapsed && group.items.map((item) => {
-                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const isActive = isNavActive(pathname, item.href);
                 const hasChildren = !!item.children?.length;
                 const isItemCollapsed = collapsedItems.has(item.href);
                 return (
@@ -281,8 +323,8 @@ export default function Sidebar() {
                       <div className="ml-5 pl-2 border-l mt-0.5"
                         style={{ borderColor: "var(--rig-border-soft)" }}
                       >
-                        {item.children.map(child => {
-                          const isChildActive = pathname.startsWith(child.href);
+                        {item.children?.map(child => {
+                          const isChildActive = isNavActive(pathname, child.href);
                           return (
                             <Link key={child.href} href={child.href}
                               className="flex items-center gap-2 px-2 py-1 rounded-md text-[11px] transition"
@@ -317,15 +359,15 @@ export default function Sidebar() {
   );
 }
 
-export function MobileNav() {
+export function MobileNav({ learningNavItem }: { learningNavItem?: SidebarInjectedNavItem | null }) {
   const pathname = usePathname();
-  const items = NAV[0].items;
+  const items = buildNav(learningNavItem)[0]?.items ?? [];
   return (
     <nav className="md:hidden fixed bottom-2 left-1/2 -translate-x-1/2 z-40 flex gap-1 px-2 py-1.5 rounded-xl border"
       style={{ background: "var(--rig-card)", borderColor: "var(--rig-border)", boxShadow: "var(--rig-shadow)" }}
     >
       {items.map((item) => {
-        const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const isActive = isNavActive(pathname, item.href);
         return (
           <Link key={item.href} href={item.href}
             className="grid place-items-center w-9 h-9 rounded-lg"
