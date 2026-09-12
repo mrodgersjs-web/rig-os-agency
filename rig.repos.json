@@ -1,0 +1,25 @@
+{
+  "schema": "rig.repo-adapters.v1",
+  "repo": "mrodgersjs-web/rig-os-agency",
+  "tier": "B_PRODUCT_APP",
+  "supabase": {
+    "schema": "rig_shared",
+    "role": "rig-os-agency-agent"
+  },
+  "loops": {
+    "default": "iqrsqpi-v20",
+    "always_on": [
+      "gate-d-loop",
+      "proof-loop"
+    ]
+  },
+  "work_routing": {
+    "schema": "rig.work-routing.v1",
+    "source": ".rig/work-routing.yaml"
+  },
+  "results_mcp": {
+    "entry": "mcp/server.py",
+    "transport": "stdio",
+    "name": "rig-results"
+  }
+}
