@@ -2,6 +2,8 @@
 
 # rig-os-agency
 
+![CI status](https://img.shields.io/github/actions/workflow/status/mrodgersjs-web/rig-os-agency/smoke.yml?label=CI&logo=github-actions)
+
 A local command centre for CLI agents: one dashboard for Claude Code, OpenClaw,
 Hermes, and anything else that speaks stdio. Chat, voice input, goals, journal,
 every interaction auto-logged to your Obsidian vault. Nothing leaves localhost.
