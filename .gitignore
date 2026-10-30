@@ -10,3 +10,5 @@ desktop/node_modules/
 *.app/Contents/Resources/app.asar
 .env.local
 .data/
+
+__pycache__/
