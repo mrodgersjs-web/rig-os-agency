@@ -1,5 +1,4 @@
 {
   "installCommand": "npm ci --no-audit --no-fund",
-  "buildCommand": "npm run build",
-  "engines": { "node": "22.x" }
+  "buildCommand": "npm run build"
 }
