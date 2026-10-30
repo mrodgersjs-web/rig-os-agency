@@ -1,0 +1,33 @@
+name: Smoke
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Boot the console and probe it
+        run: |
+          PORT=3737 npm run start &
+          server=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /tmp/probe.html -w "%{http_code}" http://127.0.0.1:3737/ || true)
+            if [ "$code" = "200" ]; then
+              grep -qi "<html" /tmp/probe.html && { echo "smoke: / served 200 with HTML on attempt $i"; kill $server; exit 0; }
+            fi
+            sleep 2
+          done
+          echo "smoke: server never served / with 200"
+          kill $server || true
+          exit 1

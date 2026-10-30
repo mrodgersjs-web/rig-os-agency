@@ -1,77 +1,41 @@
 > Part of the [mrodgersjs-web](https://github.com/mrodgersjs-web) FDE studio fleet — control planes, gates, fleets, proof. See [docs/public-boundary.md](docs/public-boundary.md).
 
-# 🦞 Agentic OS
+# rig-os-agency
 
-> A beautiful local command centre for your AI agents.
-> Built by Julian Goldie for AIPB members.
+A local command centre for CLI agents: one dashboard for Claude Code, OpenClaw,
+Hermes, and anything else that speaks stdio. Chat, voice input, goals, journal,
+every interaction auto-logged to your Obsidian vault. Nothing leaves localhost.
 
-![local](https://img.shields.io/badge/runs-localhost-22d3ee?style=flat-square)
-![private](https://img.shields.io/badge/data-stays_local-a855f7?style=flat-square)
-![voice](https://img.shields.io/badge/voice-built_in-ec4899?style=flat-square)
+![Smoke](https://github.com/mrodgersjs-web/rig-os-agency/actions/workflows/smoke.yml/badge.svg)
 
-A single dashboard for Claude Code, OpenClaw, Hermes, and any other CLI agent.
+This is a Next.js 16 console, customised for Rodgers Intelligence Group: the
+agency data layer, the `/company/*` API routes, the doctrine layer, and the
+deploy paths are this fork's work (141 commits). It started life on the Agentic
+OS scaffold by [Julian Goldie](https://aiprofitboardroom.com), and that base is
+MIT-licensed — the credit is real and the license is on the base, not a cage.
 
-Chat. Voice input. Goals. Journal.
-Every interaction auto-logged to your Obsidian vault.
-
-All running on your laptop.
-None of your data leaves.
-
----
-
-## ✨ What's inside
-
-- 💬 **Chat with multiple AI agents** from one beautiful dashboard
-- 🎤 **Voice input** in every chat box (Chrome/Safari)
-- 🧠 **Auto-saved to Obsidian** — every chat becomes a markdown note
-- 🎯 **Goals page** that writes a real task list to your vault
-- 📓 **Journal page** — daily entries, one file per day
-- 📖 **Built-in build guide** — teach others how you made yours
-- ✨ **Mission-control aesthetic** — aurora gradients, glass panels, voice-pulse animations
-- 🦞 **Real CLI bridge** — calls your local Claude / OpenClaw / Hermes binaries
-
----
-
-## 🟢 Requirements
-
-- **Node 22+** (`node -v` to check, `brew install node` if missing)
-- **macOS or Linux** (Windows works with WSL2)
-- **At least one AI agent CLI** installed locally:
-  - [Claude Code](https://claude.com/claude-code) — Anthropic's CLI
-  - OpenClaw — install via the openclaw.ai install guide
-  - Hermes Agent — install via `pip install nousresearch-hermes`
-- **Optional but recommended:** an [Obsidian](https://obsidian.md) vault
-
-If you only have one agent installed, that's fine — missing ones just don't show in the dashboard.
-
----
-
-## 🚀 Quick start (5 minutes)
-
-There's no GitHub repo to clone — this folder you're reading right now IS the dashboard source. Copy it anywhere on your machine.
+## Verify in two minutes
 
 ```bash
-# 1. Copy the source somewhere permanent (rename the destination if you like)
-cp -R . ~/Agentic\ OS/agentic-os
-cd ~/Agentic\ OS/agentic-os
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure your paths
-mkdir -p ~/.agentic-os
-cp agentic-os.config.example.json ~/.agentic-os/config.json
-# Then edit ~/.agentic-os/config.json with your vault path + agent binary paths
-
-# 4. Run it
-npm run dev
+git clone https://github.com/mrodgersjs-web/rig-os-agency.git
+cd rig-os-agency
+npm ci
+npm run build        # the same build CI runs on every push
 ```
 
-Open **http://localhost:3000** in your browser. (The Next.js dev server picks 3000 by default; set `PORT=3737` before `npm run dev` if you want a different port.)
+CI (`smoke.yml`) additionally boots the production server and probes `/` for a
+200 with HTML, on a schedule as well as on every push.
 
-> If you want a private git history of your edits, run `git init` after copying. No remote needed.
+## Run it locally
 
----
+- **Node 22+**, macOS or Linux (Windows via WSL2)
+- At least one agent CLI on `PATH`: Claude Code, OpenClaw, or Hermes
+  (`pip install nousresearch-hermes`)
+- Optional but recommended: an [Obsidian](https://obsidian.md) vault
+
+```bash
+npm run dev          # http://localhost:3000
+```
 
 ## ⚙️ Configuration
 
@@ -185,13 +149,14 @@ The full guide for using Claude Code to build this same system is at:
 - `BUILD-YOUR-OWN.md` in this repo
 - `http://localhost:3000/guide` once it's running
 
-It's 8 copy-paste prompts that mirror exactly how Julian built his.
+It's 8 copy-paste prompts that walk through how this console was assembled.
 
 ---
 
 ## 📜 Licence
 
-For AIPB members only. Not for redistribution.
-You can fork it for personal use. Just don't resell.
+MIT. See [LICENSE](LICENSE). The Agentic OS scaffold this fork started from is
+also MIT, by Julian Goldie — inherited openly, extended in the open.
 
-— Julian Goldie · [AIPB](https://aiprofitboardroom.com)
+Part of the [mrodgersjs-web](https://github.com/mrodgersjs-web) FDE studio fleet.
+[rodgersintelligence.com](https://rodgersintelligence.com)
